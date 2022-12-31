@@ -115,7 +115,7 @@ class SettingView(ttk.Frame):
         self.ddFilenameFormat=ttk.Combobox(self, textvariable=self.strFileFormat)
         self.ddFilenameFormat.state='readonly'
         self.ddFilenameFormat.grid(row="1", column="1",sticky='W', padx=5)
-        self.ddFilenameFormat.bind('<<ComboboxSelected>>', self.update_model)
+        self.ddFilenameFormat.bind('<<ComboboxSelected>>', self.comboSelected)
     
 
         # Log settings widgets
@@ -131,7 +131,7 @@ class SettingView(ttk.Frame):
         self.ddLogLevel=ttk.Combobox(self,textvariable=self.strLogLevel)
         self.ddLogLevel.state='readonly'
         self.ddLogLevel.grid(row="2", column="1",sticky='W', padx=5)
-        self.ddLogLevel.bind('<<ComboboxSelected>>', self.update_model)
+        self.ddLogLevel.bind('<<ComboboxSelected>>',self.comboSelected)
 
 
         #Safe button
@@ -149,9 +149,9 @@ class SettingView(ttk.Frame):
     def setLogWidgets(self,logLevel, logLevelsList, logToFile):
         self.lstLoglevels=logLevelsList
         self.ddLogLevel['values']=self.lstLoglevels
-        self.strLogLevel=logLevel.upper()
-        self.ddLogLevel.current(self.lstLoglevels.index(self.strLogLevel))
-        self.intLogToFile=logToFile
+        self.strLogLevel.set(logLevel.upper())
+        self.ddLogLevel.current(self.lstLoglevels.index(self.strLogLevel.get()))
+        self.intLogToFile.set(logToFile)
 
     def getDirectory(self):
         # get a directory path by user
@@ -165,18 +165,31 @@ class SettingView(ttk.Frame):
     def set_controller(self, controller):
         self._controller=controller
 
-    def update_model(self, *args):
+    def update_model(self):
         if self._controller:
+            print(str(self.intLogToFile.get()))
             self._controller.updateModel(self.strDirectory.get(),
             self.strFileFormat.get(),
             self.strLogLevel.get(),
             self.intLogToFile.get())
 
+    def comboSelected(self,event):
+        self.update_model()
+
     def safe(self):
         if self._controller:
             self._controller.safe()
 
+class Controller:
+    def __init__(self, model : RenamerSettings, view):
+        self.model = model
+        self.view = view
 
+    def updateModel(self, directory, fileformat, loglevel, logtofile ):
+        self.model.sourceDir=directory
+        self.model.fileFormat=fileformat
+        self.model.logLevel=loglevel
+        self.model.logToFile=logtofile
 
 def getDirectory(strDirectory):
     # get a directory path by user
@@ -246,56 +259,8 @@ if __name__ == "__main__":
     clSettings.setWidgets(clConfig.sourceDir,clConfig.fileFormat,clConfig.FILEFORMATS)
     clSettings.setLogWidgets(clConfig.logLevel,clConfig.LOGLEVELS,clConfig.logToFile)
 
-    frmSetting=ttk.Frame(root, padding=10, width=680, height=110, relief="ridge", borderwidth=3)
-    frmSetting.grid_propagate(0)
-    #frmSetting.grid(column=0, row=0,padx=5,pady=5, ipadx=5)
-   
-    lblFlightPlanPath = tk.Label(frmSetting,text="Flight Plan directory:", pady="5")
-    #lblFlightPlanPath.grid(row="0", column="0",sticky='W')
-
-
-    strDirectory = tk.StringVar()
-    strDirectory.set(clConfig.sourceDir)
-    
-    entFlightPlanPath = tk.Entry(frmSetting, textvariable=strDirectory, width=50)
-    #entFlightPlanPath.grid(row="0",column="1", columnspan=3, sticky='W', padx=5)
-    
-    btnBrowser = ttk.Button(frmSetting, text="browse",
-                                    command=lambda: getDirectory(strDirectory))
-    btnBrowser.grid(row=0, column=4)
-
-    lblFilenameFormat = tk.Label(frmSetting,text="Filename Format:", pady="5")
-    #lblFilenameFormat.grid(row="1", column="0", sticky='W')
-
-    strFileFormat = tk.StringVar()
-    strFileFormat.set(clConfig.fileFormat)
-    ddFilenameFormat=ttk.Combobox(frmSetting, textvariable=strFileFormat)
-    ddFilenameFormat['values']=clConfig.FILEFORMATS
-    ddFilenameFormat.state='readonly'
-    #ddFilenameFormat.grid(row="1", column="1",sticky='W', padx=5)
-    #ddFilenameFormat.bind('<<ComboboxSelected>>', update_model)
-
-
-    cbLog2File=tk.Checkbutton(frmSetting, text='Log to file', onvalue=1, offvalue=0, command=Logtofile)
-    #cbLog2File.grid(row=2,column=2,sticky='W')
-    btnSafe = ttk.Button(frmSetting, text="Safe", state="disabled", command=safeSettings)
-                                    
-    #btnSafe.grid(row=1, column=4)
- 
-    lblLogLevel = tk.Label(frmSetting,text="Log level:", pady="5")
-    #lblLogLevel.grid(row="2", column="0", sticky='W')
-    
-
-    strLogLevel=tk.StringVar()
-    lstLoglevels = clConfig.LOGLEVELS
-    ddLogLevel=ttk.Combobox(frmSetting,textvariable=strLogLevel)
-    ddLogLevel['values'] = lstLoglevels
-    
-    ddLogLevel.current(lstLoglevels.index(clConfig.logLevel.upper()))
-    ddLogLevel.state='readonly'
-    #ddLogLevel.grid(row="2", column="1",sticky='W', padx=5)
-    ddLogLevel.bind('<<ComboboxSelected>>', update_model)
-
+    controller=Controller(clConfig,clSettings)
+    clSettings.set_controller(controller)
 
     frmState=ttk.Frame(root, padding=15, width=680, height=100, relief="ridge", borderwidth=3)
     frmState.grid_propagate(0)
