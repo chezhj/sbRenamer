@@ -225,16 +225,6 @@ def cmdStartStop(strStartStop, config):
         strStartStop.set("Start")
         stopMonitoring(config,clConfig)
 
-def update_model(event):
-    clConfig.sourceDir=strDirectory.get()
-    clConfig.fileFormat=strFileFormat.get()
-    clConfig.logLevel=strLogLevel.get()
-
-    if clConfig.dirty:
-        btnSafe["state"]=tk.NORMAL
-    else:
-        btnSafe["state"]=tk.DISABLED
-
 def safeSettings():
     clConfig.safe()
     if clConfig.dirty:
