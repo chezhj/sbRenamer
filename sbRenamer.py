@@ -38,56 +38,8 @@ def main():
 
     
 
-def startMonitoring(config,clConfig):
-    config.observer = Observer()
-    sourcedir=pathlib.Path(config['BaseSettings']['source_dir'])
-   
-    config.observer.schedule(MyHandler(config, clConfig), sourcedir , recursive=False)
-    config.observer.start() 
-    logging.info(f"Starting File System Watcher")
-    
-def stopMonitoring(config, clConfig):    
-    config.observer.stop()
-    config.observer.join()
 
   
-class MyHandler(PatternMatchingEventHandler):
-    patterns = ["*.xml"]
-    fileNameCreated = pathlib.Path(__file__)
-
-    def __init__(self,config, clConfig):
-        PatternMatchingEventHandler.__init__(self)
-        self._config = config
-        self._clConfig = clConfig
-
-    def on_created(self, event):
-        logging.info(f"created  %s" %(event.src_path))
-        
-        #Need to check if the file created previously supdattill exitst to prevent errors
-        if self.fileNameCreated.exists():
-            # Now lest check if the file that triggers the event, is the one we just created, because we
-            # don't need to do anything with this file
-            if self.fileNameCreated.samefile(pathlib.Path(event.src_path)) :
-                logging.info("Ignoring the file just created by this process")
-                return
-        
-        self.copy_shortend(event)
-        
-    def copy_shortend(self, event):
-        newfilePath = pathlib.Path(event.src_path)
-        filename = newfilePath.stem
-        #destFile = newfilePath.parent / pathlib.Path(filename[:8] +  newfilePath.suffix)
-        destFile = newfilePath.parent / self._clConfig.newFileName(filename)
-
-        self.fileNameCreated=destFile
-        if destFile.is_file():
-            logging.info(f"Destination file exits" )
-            backupFile = destFile.parent / pathlib.Path(destFile.stem + "_" + time.strftime("%Y%m%d%H%M%S") + destFile.suffix )
-            destFile.rename(backupFile)
-            logging.info(f"Renamed existing file to %s" %(backupFile) )
-
-        shutil.copyfile(newfilePath,destFile)
-        logging.info(f"filename: %s copied to %s" %(filename, destFile) )
         
 class SettingView(ttk.Frame):
     
@@ -159,15 +111,15 @@ class SettingView(ttk.Frame):
                                     title="Dialog box")
         if selected != "":
             self.strDirectory.set(selected)
-            logging.info(f"New directory is set to:  %s" % self.strDirectory.get())
             self.update_model()
+            logging.info(f"New directory is set to:  %s" % self.strDirectory.get())
+            
     
     def set_controller(self, controller):
         self._controller=controller
 
     def update_model(self):
         if self._controller:
-            print(str(self.intLogToFile.get()))
             self._controller.updateModel(self.strDirectory.get(),
             self.strFileFormat.get(),
             self.strLogLevel.get(),
@@ -180,10 +132,44 @@ class SettingView(ttk.Frame):
         if self._controller:
             self._controller.safe()
 
+    def updateSafeBtn(self, dirty):
+        if dirty:
+            self.btnSafe["state"]=tk.NORMAL
+        else:
+            self.btnSafe["state"]=tk.DISABLED
+
+
+
+class RenamerView(ttk.Frame):
+    
+    def __init__(self, parent):
+        super().__init__(parent, padding=15, width=680, height=100, relief="ridge", borderwidth=3)
+        self.grid_propagate(0)
+        self.grid(column=0, row=1,padx=5,pady=5, ipadx=5)
+        self.strState = tk.StringVar()
+        self.strState.set("Start")
+        self.btnStart = ttk.Button(self, textvariable=self.strState, command=self.startStop)
+        self.btnStart.grid(row=1, column=4)
+        self._controller =  None
+                                    
+    def startStop(self):
+        if self._controller:
+            newState=self._controller.switchMonitoring(self.strState.get())
+            self.strState.set(newState)
+
+    def set_controller(self, controller):
+        self._controller=controller      
+
+
 class Controller:
-    def __init__(self, model : RenamerSettings, view):
+    def __init__(self, model : RenamerSettings, settingView:SettingView, renameView:RenamerView):
         self.model = model
-        self.view = view
+        self.settingView = settingView
+        self.renamerView = renameView
+        #self.view.set_controller=self
+      
+        self.model.setCallBack(self.updateView)
+
 
     def updateModel(self, directory, fileformat, loglevel, logtofile ):
         self.model.sourceDir=directory
@@ -191,77 +177,101 @@ class Controller:
         self.model.logLevel=loglevel
         self.model.logToFile=logtofile
 
-def getDirectory(strDirectory):
-    # get a directory path by user
-    selected=filedialog.askdirectory(initialdir=strDirectory.get(),
-                                    title="Dialog box")
-    if selected != "":
-        strDirectory.set(selected)
-        #logger = logging.getLogger(__name__)
-        logging.info(f"New directory is:  %s" %strDirectory.get())
-        update_model()
+    def switchMonitoring(self,state):
+        if state=="Stop":
+            self.stopMonitoring()
+            return "Start"
+        else:
+            self.startMonitoring()
+            return "Stop"
 
-def Logtofile():
-    logger = logging.getLogger()
-    logger.info("checking")
-    for lHandler  in logger.handlers:
-        if lHandler.__class__.__name__ == "FileHandler":
-            logger.removeHandler(lHandler)
-            return
+    def startMonitoring(self):
+        self._observer = Observer()
+        sourcedir=pathlib.Path(self.model.sourceDir)
+        self._observer.schedule(MyHandler(self.model), sourcedir , recursive=False)
+        self._observer.start() 
+        self.model.monitoring=True
+        logging.info(f"Starting File System Watcher")
 
-    handler = logging.FileHandler('log.txt')
-    logger.addHandler(handler)
+    def stopMonitoring(self):    
+        self._observer.stop()
+        self._observer.join()
+        logging.info(f"Stopping File System Watcher")
 
-def cmdStartStop(strStartStop, config):
-    print("starting or stopping")
-    print(strState.get())
-    
-    if strStartStop.get() == "Start":
-        strStartStop.set("Stop")
-        startMonitoring(config,clConfig)
-        return
+    def safe(self):
+        self.model.safe()
 
-    if strStartStop.get() == "Stop":
-        strStartStop.set("Start")
-        stopMonitoring(config,clConfig)
+    def updateView(self):
+        self.settingView.updateSafeBtn(self.model.dirty)
 
-def safeSettings():
-    clConfig.safe()
-    if clConfig.dirty:
-        btnSafe["state"]=tk.NORMAL
-    else:
-        btnSafe["state"]=tk.DISABLED
+class MyHandler(PatternMatchingEventHandler):
+    #Set filename pattern
+    patterns = ["*.xml"]
+    #Initialise fileNameCreated, will be used to ignore the file created
+    fileNameCreated = pathlib.Path(__file__)
+
+    def __init__(self, model : RenamerSettings):
+        PatternMatchingEventHandler.__init__(self)
+        self.model=model
+
+    def on_created(self, event):
+        logging.info(f"Found newly created file: %s" %(event.src_path))
+        
+        #Need to check if the file created previously still exitst to prevent errors
+        if self.fileNameCreated.exists():
+            logging.debug("FilenameCreated (%s) is existing", self.fileNameCreated) 
+            # Now lets check if the file that triggers the event, is the one we just created, because we
+            # don't need to do anything with this file
+            if self.fileNameCreated.samefile(pathlib.Path(event.src_path)) :
+                logging.info("Ignoring the file just created by this process")
+                return
+        
+        self.copy_shortend(event)
+        
+    def copy_shortend(self, event):
+        # This method needs to move to the Renamer model??
+        newfilePath = pathlib.Path(event.src_path)
+        filename = newfilePath.stem
+        destFile = newfilePath.parent / self.model.newFileName(filename)
+
+        self.fileNameCreated=destFile
+        if destFile.is_file():
+            logging.info(f"Destination file exits" )
+            backupFile = destFile.parent / pathlib.Path(destFile.stem + "_" + time.strftime("%Y%m%d%H%M%S") + destFile.suffix )
+            destFile.rename(backupFile)
+            logging.info(f"Renamed existing file to %s" %(backupFile) )
+
+        shutil.copyfile(newfilePath,destFile)
+        logging.info(f"filename: %s copied to %s" %(filename, destFile) )
+
+
+class MainApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.geometry("700x400")
+        self.resizable(width=False,height=False)
+        self.title("SimBrief Renamer by ChezHJ")
+
+        self._config = RenamerSettings(configFileName)
+
+        self._settings = SettingView(self)
+        self._settings.grid(column=0, row=0,padx=5,pady=5, ipadx=5)
+        self._settings.setWidgets(self._config.sourceDir,self._config.fileFormat,self._config.FILEFORMATS)
+        self._settings.setLogWidgets(self._config.logLevel,self._config.LOGLEVELS,self._config.logToFile)
+
+        self._renamerView = RenamerView(self)
+        self._renamerView.grid(column=0, row=1,padx=5,pady=5, ipadx=5)
+        controller=Controller(self._config,self._settings, self._renamerView)
+        self._controller=controller
+        self._settings.set_controller(controller)
+        self._renamerView.set_controller(controller)
+
 
 
 
 if __name__ == "__main__":
-    config=main()
-    clConfig = RenamerSettings(configFileName)
-  
-    logging.info("Starting up")
-    root = tk.Tk()
-    root.geometry("700x400")
-    root.resizable(width=False,height=False)
-    root.title("SimBrief Renamer by ChezHJ")
+    
+    app=MainApp()
 
-    clSettings = SettingView(root)
-    clSettings.grid(column=0, row=0,padx=5,pady=5, ipadx=5)
-    clSettings.setWidgets(clConfig.sourceDir,clConfig.fileFormat,clConfig.FILEFORMATS)
-    clSettings.setLogWidgets(clConfig.logLevel,clConfig.LOGLEVELS,clConfig.logToFile)
-
-    controller=Controller(clConfig,clSettings)
-    clSettings.set_controller(controller)
-
-    frmState=ttk.Frame(root, padding=15, width=680, height=100, relief="ridge", borderwidth=3)
-    frmState.grid_propagate(0)
-    frmState.grid(column=0, row=1,padx=5,pady=5, ipadx=5)
-
-    strState = tk.StringVar()
-    strState.set("Start")
-    btnStart = ttk.Button(frmState, textvariable=strState, command=lambda: cmdStartStop(strState, config))
-                                    
-    print(strState.get())                               
-    btnStart.grid(row=1, column=4)
- 
-    root.mainloop()
+    app.mainloop()
    

@@ -18,6 +18,8 @@ class RenamerSettings:
             logging.error("No configfile (%s) found" %cnfFileName)
             exit(1) 
         self._dirty = False
+        self._monitoring = False
+        self._callBack=None
         logging.basicConfig(level=self.logLevel,
                         format='%(asctime)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
@@ -26,16 +28,27 @@ class RenamerSettings:
 
     def __setValue(self, key, value):
         if value == self._config['BaseSettings'].get(key):
-            return
+            logging.debug("New value %s is the same as current %s", value, self._config['BaseSettings'].get(key))
+            return False
         self._config['BaseSettings'][key]=value
         self._dirty=True
-        logging.info("%s set to: %s", key ,value )
+        if self._callBack:
+            self._callBack()
+
+        logging.debug("SetValue: %s set to: %s", key ,value )
+        return True
 
     @property
     def dirty(self):
         return self._dirty
 
-        
+    @property
+    def monitoring(self):
+        return self._monitoring
+
+    @monitoring.setter
+    def monitoring(self, value):
+        self._monitoring=value
 
     @property
     def sourceDir(self):
@@ -58,13 +71,13 @@ class RenamerSettings:
     
     @property
     def logLevel(self):
-        return self._config['BaseSettings'].get('loglevel', "ERROR")        
+        return self._config['BaseSettings'].get('loglevel', "ERROR")       
 
     @logLevel.setter
     def logLevel(self,value):
-        self.__setValue('loglevel',value)
-        logging.getLogger().setLevel(self.logLevel)
-        logging.info("Altered log level to %s",self.logLevel)
+        if self.__setValue('loglevel',value):
+            logging.getLogger().setLevel(self.logLevel)
+            logging.info("Altered log level to %s",self.logLevel)
     
     @property
     def logToFile(self):
@@ -72,8 +85,14 @@ class RenamerSettings:
 
     @logToFile.setter
     def logToFile(self, value):
-        self.__setValue("log_to_file",str(value))
-        self._setFileLogging()
+        if self.__setValue("log_to_file",str(value)):
+            self._setFileLogging()
+
+    def setCallBack(self,callBack):
+        self._callBack=callBack
+
+    def removeCallBack(self):
+        self._callBack=None
 
     def _setFileLogging(self):
             logger = logging.getLogger()
