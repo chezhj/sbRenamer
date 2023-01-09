@@ -1,4 +1,5 @@
 
+from datetime import datetime
 import logging
 import time
 import configparser
@@ -7,12 +8,15 @@ import shutil
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
+from tkinter import scrolledtext
 from watchdog.observers import Observer  
 from watchdog.events import PatternMatchingEventHandler
 from RenamerSettingsModel import RenamerSettings
 
 configFileName='config.ini'
 #used python-watchdog.py from https://gist.github.com/rms1000watt
+#and http://sfriederichs.github.io/how-to/python/gui/logging/2017/12/21/Python-GUI-Logging.html
+#and mvc intro https://www.pythontutorial.net/tkinter/tkinter-mvc/
 
 
 
@@ -44,7 +48,9 @@ def main():
 class SettingView(ttk.Frame):
     
     def __init__(self, parent):
-        super().__init__(parent, padding=10, width=680, height=110, relief="ridge", borderwidth=3)
+        parent_width = parent.winfo_width()
+        parent_height = parent.winfo_height()
+        super().__init__(parent, padding=10, width=parent_width-22, height=110, relief="ridge", borderwidth=3)
         self.grid_propagate(0)
 
         
@@ -52,7 +58,7 @@ class SettingView(ttk.Frame):
         self.lblFlightPlanPath = tk.Label(self,text="Flight Plan directory:", pady="5")
         self.lblFlightPlanPath.grid(row="0", column="0",sticky='W')
         self.strDirectory = tk.StringVar()
-        entFlightPlanPath = tk.Entry(self, textvariable=self.strDirectory, width=50)
+        entFlightPlanPath = tk.Entry(self, textvariable=self.strDirectory, width=62)
         entFlightPlanPath.grid(row="0",column="1", columnspan=3, sticky='W', padx=5)
         #Browse for dir button
         self.btnBrowser = ttk.Button(self, text="browse",
@@ -143,13 +149,18 @@ class SettingView(ttk.Frame):
 class RenamerView(ttk.Frame):
     
     def __init__(self, parent):
-        super().__init__(parent, padding=15, width=680, height=100, relief="ridge", borderwidth=3)
+        parent_width = parent.winfo_width()
+        parent_height = parent.winfo_height()
+        super().__init__(parent, padding=10, width=parent_width-22, height=parent_height-150, relief="ridge", borderwidth=3)
         self.grid_propagate(0)
-        self.grid(column=0, row=1,padx=5,pady=5, ipadx=5)
+        self.grid(column=0, row=1, sticky="NW")
         self.strState = tk.StringVar()
         self.strState.set("Start")
         self.btnStart = ttk.Button(self, textvariable=self.strState, command=self.startStop)
-        self.btnStart.grid(row=1, column=4)
+        self.btnStart.grid(row=1, column=3,pady=3, sticky='E')
+        self.logWidget = scrolledtext.ScrolledText(self, font =("Courier",8))
+        self.logWidget.config(state='disabled')
+        self.logWidget.grid(row=2 ,column=0, columnspan=4,sticky='NE')
         self._controller =  None
                                     
     def startStop(self):
@@ -159,7 +170,20 @@ class RenamerView(ttk.Frame):
 
     def set_controller(self, controller):
         self._controller=controller      
-
+    
+    def addLine(self,value):
+        #Enable the widget to allow new text to be inserted
+        self.logWidget.config(state='normal')
+        
+        # Append log message to the widget
+        self.logWidget.insert('insert', value)
+        
+        #Scroll down to the bottom of the ScrolledText box to ensure the latest log message
+        #is visible
+        self.logWidget.see("end")
+        
+        #Re-disable the widget to prevent users from entering text
+        self.logWidget.config(state='disabled')
 
 class Controller:
     def __init__(self, model : RenamerSettings, settingView:SettingView, renameView:RenamerView):
@@ -169,7 +193,8 @@ class Controller:
         #self.view.set_controller=self
       
         self.model.setCallBack(self.updateView)
-
+        self.model.setLogListener(self.updateWidget)
+   
 
     def updateModel(self, directory, fileformat, loglevel, logtofile ):
         self.model.sourceDir=directory
@@ -203,6 +228,9 @@ class Controller:
 
     def updateView(self):
         self.settingView.updateSafeBtn(self.model.dirty)
+    
+    def updateWidget(self, value):
+        self.renamerView.addLine(value)
 
 class MyHandler(PatternMatchingEventHandler):
     #Set filename pattern
@@ -248,30 +276,33 @@ class MyHandler(PatternMatchingEventHandler):
 class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.geometry("700x400")
+        self.geometry("620x560")
         self.resizable(width=False,height=False)
         self.title("SimBrief Renamer by ChezHJ")
-
-        self._config = RenamerSettings(configFileName)
-
+        #if we want parent frames to resize to there master, we need to update the app
+        self.update()
+       
         self._settings = SettingView(self)
         self._settings.grid(column=0, row=0,padx=5,pady=5, ipadx=5)
-        self._settings.setWidgets(self._config.sourceDir,self._config.fileFormat,self._config.FILEFORMATS)
-        self._settings.setLogWidgets(self._config.logLevel,self._config.LOGLEVELS,self._config.logToFile)
-
+    
         self._renamerView = RenamerView(self)
         self._renamerView.grid(column=0, row=1,padx=5,pady=5, ipadx=5)
+      
+        self._config = RenamerSettings(configFileName)
         controller=Controller(self._config,self._settings, self._renamerView)
+
+        self._settings.setWidgets(self._config.sourceDir,self._config.fileFormat,self._config.FILEFORMATS)
+        self._settings.setLogWidgets(self._config.logLevel,self._config.LOGLEVELS,self._config.logToFile)
+  
         self._controller=controller
         self._settings.set_controller(controller)
         self._renamerView.set_controller(controller)
 
-
+        logging.info("Succesfully initialised")
 
 
 if __name__ == "__main__":
-    
     app=MainApp()
-
+    
     app.mainloop()
    

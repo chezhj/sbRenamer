@@ -10,6 +10,15 @@ class RenamerSettings:
     FILEFORMATS = [ SHORT_FORMAT,ZERO_FORMAT ]
     LOGFILENAME = 'log.txt'
 
+    WIDGIT_LOG_FORMAT = {
+        "fmt": '%(asctime)s - %(levelname)s - %(message)s',
+        "datefmt": '%Y-%m-%d %H:%M:%S'
+    }
+    FILE_LOG_FORMAT = {
+        "fmt": '%(asctime)s - %(levelname)s - %(message)s',
+        "datefmt": '%Y-%m-%d %H:%M:%S'
+    }
+
 
     def __init__(self, cnfFileName):
         self._config = configparser.ConfigParser()
@@ -20,11 +29,18 @@ class RenamerSettings:
         self._dirty = False
         self._monitoring = False
         self._callBack=None
-        logging.basicConfig(level=self.logLevel,
-                        format='%(asctime)s - %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
-        logging.info("Configuration loaded from: %s" %cnfFileName)
+        self._logFileHandler = None
         self._iniFileName = cnfFileName
+        self._logHandler = loggerHandler(logging.INFO,self.WIDGIT_LOG_FORMAT)
+        self._addLogHandlerToLogger()
+        self._setFileLogging()
+        
+        # Base loghandler is always lowest level
+        logging.getLogger().setLevel(logging.DEBUG)
+        # Widget handler should always be on INFO
+        self._logHandler.setLevel(logging.INFO)
+        logging.info("Configuration loaded from: %s" %cnfFileName)
+        
 
     def __setValue(self, key, value):
         if value == self._config['BaseSettings'].get(key):
@@ -66,8 +82,9 @@ class RenamerSettings:
 
     @fileFormat.setter
     def fileFormat(self, value):
-        #todo validate at later stage
-        self.__setValue("file_format",value)
+        
+        if self.__setValue("file_format",value):
+            logging.info("Changed filename format to %s", self.fileFormat)
     
     @property
     def logLevel(self):
@@ -76,7 +93,13 @@ class RenamerSettings:
     @logLevel.setter
     def logLevel(self,value):
         if self.__setValue('loglevel',value):
-            logging.getLogger().setLevel(self.logLevel)
+            if self._logFileHandler:
+                self._logFileHandler.setLevel(self.logLevel)
+            
+            # Base loghandler is always lowest level
+            logging.getLogger().setLevel(logging.DEBUG)
+            # Widget handler should always be on INFO
+            self._logHandler.setLevel(logging.INFO)
             logging.info("Altered log level to %s",self.logLevel)
     
     @property
@@ -94,23 +117,38 @@ class RenamerSettings:
     def removeCallBack(self):
         self._callBack=None
 
+    def setLogListener(self,logListener):
+        self._logListener=logListener
+        self._logHandler.set_listener(logListener)
+
+    def removeLogListener(self):
+        self._logListener=None
+
+    def _addLogHandlerToLogger(self):
+        logger = logging.getLogger()
+        logger.addHandler(self._logHandler)
+        logging.info("Added custom log handler for logging")
+
     def _setFileLogging(self):
             logger = logging.getLogger()
-            logFileHandler = None
-            for lHandler  in logger.handlers:
-                if lHandler.__class__.__name__ == "FileHandler":
-                    logging.info("Found file handler for logging")
-                    logFileHandler = lHandler
-
+            
             if self.logToFile == "1":
                 #check if there is a file handler
-                if not logFileHandler:
-                    logFileHandler = logging.FileHandler(self.LOGFILENAME)                 
-                    logger.addHandler(logFileHandler)
+
+                file=pathlib.Path(self.LOGFILENAME).resolve()
+                if file.exists():
+                    file.unlink()
+                if not self._logFileHandler:
+
+                    self._logFileHandler = logging.FileHandler(self.LOGFILENAME)      
+                    self._logFileHandler.setFormatter( logging.Formatter(**self.FILE_LOG_FORMAT))   
+                    self._logFileHandler.setLevel(self.logLevel)       
+                    logger.addHandler(self._logFileHandler)
+                   
                     logging.info("Added file handler for logging to %s", self.LOGFILENAME)
             else:
-                if logFileHandler:
-                    logger.removeHandler(logFileHandler)
+                if self._logFileHandler:
+                    logger.removeHandler(self._logFileHandler)
                     logging.info("Removed file handler for logging")
 
     def safe(self):
@@ -126,3 +164,21 @@ class RenamerSettings:
         if self.fileFormat == self.ZERO_FORMAT:
             return pathlib.Path(currentFilename[:8] + "01.xml")
             
+
+class loggerHandler(logging.Handler):
+    
+    def __init__(self,logLevel,formatDict):
+        logging.Handler.__init__(self)
+        self.setLevel(logLevel)
+        self.setFormatter(logging.Formatter(**formatDict))
+        self._listener = None
+        
+
+
+    #This function is called when a log message is to be handled
+    def emit(self, record):
+        if self._listener:
+            self._listener(str(self.format(record) + '\n'))
+
+    def set_listener(self,listener):
+        self._listener=listener        
