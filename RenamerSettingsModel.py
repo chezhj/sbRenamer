@@ -1,6 +1,8 @@
 import logging
 import configparser
 import pathlib
+import errno
+import os
 
 class RenamerSettings:
 
@@ -25,7 +27,7 @@ class RenamerSettings:
         self._dirty = True
         if self._config.read(cnfFileName) == []:
             logging.error("No configfile (%s) found" %cnfFileName)
-            exit(1) 
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), cnfFileName)
         self._dirty = False
         self._monitoring = False
         self._callBack=None
@@ -104,7 +106,7 @@ class RenamerSettings:
     
     @property
     def logToFile(self):
-        return self._config['BaseSettings'].get("log_to_file", 0)
+        return self._config['BaseSettings'].getint("log_to_file", 0)
 
     @logToFile.setter
     def logToFile(self, value):
@@ -132,12 +134,14 @@ class RenamerSettings:
     def _setFileLogging(self):
             logger = logging.getLogger()
             
-            if self.logToFile == "1":
+            if self.logToFile == 1:
                 #check if there is a file handler
 
                 file=pathlib.Path(self.LOGFILENAME).resolve()
+            
                 if file.exists():
                     file.unlink()
+                    
                 if not self._logFileHandler:
 
                     self._logFileHandler = logging.FileHandler(self.LOGFILENAME)      
@@ -149,6 +153,9 @@ class RenamerSettings:
             else:
                 if self._logFileHandler:
                     logger.removeHandler(self._logFileHandler)
+                    self._logFileHandler.flush()
+                    self._logFileHandler.close()
+                    self._logFileHandler=None
                     logging.info("Removed file handler for logging")
 
     def safe(self):

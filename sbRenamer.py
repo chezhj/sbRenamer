@@ -1,6 +1,7 @@
 
 from datetime import datetime
 import logging
+import sys
 import time
 import configparser
 import pathlib
@@ -12,6 +13,7 @@ from tkinter import scrolledtext
 from watchdog.observers import Observer  
 from watchdog.events import PatternMatchingEventHandler
 from RenamerSettingsModel import RenamerSettings
+from tkinter.messagebox import showerror
 
 configFileName='config.ini'
 #used python-watchdog.py from https://gist.github.com/rms1000watt
@@ -77,18 +79,21 @@ class SettingView(ttk.Frame):
     
 
         # Log settings widgets
+        self.lblLogToFile = tk.Label(self,text='Log to file:')
+        self.lblLogToFile.grid(row="2",column="0",sticky='W')
+
         self.intLogToFile = tk.IntVar()
-        self.cbLog2File=tk.Checkbutton(self, text='Log to file', onvalue=1, offvalue=0, variable=self.intLogToFile,
+        self.cbLog2File=tk.Checkbutton(self, text='Active', onvalue=1, offvalue=0, variable=self.intLogToFile,
             command=self.update_model)
-        self.cbLog2File.grid(row=2,column=2,sticky='W')
+        self.cbLog2File.grid(row=2,column=1,sticky='W')
         self.lblLogLevel = tk.Label(self,text="Log level:", pady="5")
-        self.lblLogLevel.grid(row="2", column="0", sticky='W')
+        self.lblLogLevel.grid(row="2", column="2", sticky='W')
         
         self.strLogLevel=tk.StringVar()
         self.lstLoglevels = []
         self.ddLogLevel=ttk.Combobox(self,textvariable=self.strLogLevel)
         self.ddLogLevel.state='readonly'
-        self.ddLogLevel.grid(row="2", column="1",sticky='W', padx=5)
+        self.ddLogLevel.grid(row="2", column="3",sticky='E', padx=5)
         self.ddLogLevel.bind('<<ComboboxSelected>>',self.comboSelected)
 
 
@@ -108,8 +113,17 @@ class SettingView(ttk.Frame):
         self.lstLoglevels=logLevelsList
         self.ddLogLevel['values']=self.lstLoglevels
         self.strLogLevel.set(logLevel.upper())
+     
+        self.update_loglevelwidget(logToFile)
+
         self.ddLogLevel.current(self.lstLoglevels.index(self.strLogLevel.get()))
         self.intLogToFile.set(logToFile)
+
+    def update_loglevelwidget(self, logToFile):
+        if logToFile == 1:
+            self.ddLogLevel.config(state=tk.NORMAL)
+        else:
+            self.ddLogLevel.config(state=tk.DISABLED)
 
     def getDirectory(self):
         # get a directory path by user
@@ -130,6 +144,7 @@ class SettingView(ttk.Frame):
             self.strFileFormat.get(),
             self.strLogLevel.get(),
             self.intLogToFile.get())
+        self.update_loglevelwidget(self.intLogToFile.get())
 
     def comboSelected(self,event):
         self.update_model()
@@ -176,7 +191,7 @@ class RenamerView(ttk.Frame):
         self.logWidget.config(state='normal')
         
         # Append log message to the widget
-        self.logWidget.insert('insert', value)
+        self.logWidget.insert(tk.END, value)
         
         #Scroll down to the bottom of the ScrolledText box to ensure the latest log message
         #is visible
@@ -302,7 +317,10 @@ class MainApp(tk.Tk):
 
 
 if __name__ == "__main__":
-    app=MainApp()
-    
+    try:
+        app=MainApp()
+    except FileNotFoundError as e:
+        showerror("Error", e.filename +"\n" + e.strerror)
+        sys.exit(1)
     app.mainloop()
    
