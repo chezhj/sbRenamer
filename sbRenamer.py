@@ -73,7 +73,8 @@ class SettingView(ttk.Frame):
 
         self.strFileFormat = tk.StringVar()
         self.ddFilenameFormat=ttk.Combobox(self, textvariable=self.strFileFormat)
-        self.ddFilenameFormat.state='readonly'
+       
+        self.ddFilenameFormat.config(state='readonly')
         self.ddFilenameFormat.grid(row="1", column="1",sticky='W', padx=5)
         self.ddFilenameFormat.bind('<<ComboboxSelected>>', self.comboSelected)
     
@@ -92,7 +93,7 @@ class SettingView(ttk.Frame):
         self.strLogLevel=tk.StringVar()
         self.lstLoglevels = []
         self.ddLogLevel=ttk.Combobox(self,textvariable=self.strLogLevel)
-        self.ddLogLevel.state='readonly'
+        self.ddLogLevel.config(state='readonly')
         self.ddLogLevel.grid(row="2", column="3",sticky='E', padx=5)
         self.ddLogLevel.bind('<<ComboboxSelected>>',self.comboSelected)
 
@@ -121,9 +122,9 @@ class SettingView(ttk.Frame):
 
     def update_loglevelwidget(self, logToFile):
         if logToFile == 1:
-            self.ddLogLevel.config(state=tk.NORMAL)
+            self.ddLogLevel.config(state='readonly')
         else:
-            self.ddLogLevel.config(state=tk.DISABLED)
+            self.ddLogLevel.config(state='disabled')
 
     def getDirectory(self):
         # get a directory path by user

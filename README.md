@@ -1,5 +1,10 @@
 # sbRenamer
 
+Version 0.5
+ALFA TESTING
+Use at own risks
+
+
 The goal of this project is two fold
 1: learn how to do stuff in python
 2: make something usefull
@@ -10,3 +15,8 @@ The ZIBO mod, a wonderfull Boeing 738 plane, can read flightplan and weather fro
 but it needs to have the same stem. 
 So if you flightplan is EHAMLFPG.fpl the xml should also be EHAMLFPG.xml 
 This tools monitors a diretory for xmlfiles newly created, then renames while saving any older files
+
+Installation
+Option 1: use installer sbRenamerInstaller.exe
+Option 2: copy all files from sbRenamer directory in output directory somewhere on your system
+
