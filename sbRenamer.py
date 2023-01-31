@@ -21,31 +21,7 @@ configFileName='config.ini'
 #and mvc intro https://www.pythontutorial.net/tkinter/tkinter-mvc/
 
 
-
-def main():
-    config = configparser.ConfigParser()
-    
-    if config.read(configFileName) == []:
-        logging.error("No configfile (%s) found" %configFileName)
-        exit(1)
-
-    loglevel=config['BaseSettings']['loglevel']
-    if loglevel != "": 
-        numeric_level = getattr(logging, loglevel.upper(), None)
-        if not isinstance(numeric_level, int):
-            raise ValueError('Invalid log level: %s' % loglevel)
-
-     
-    logging.basicConfig(level=numeric_level,
-                        format='%(asctime)s - %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
-
-    return(config)
-
-    
-
-
-  
+ 
         
 class SettingView(ttk.Frame):
     
@@ -74,10 +50,20 @@ class SettingView(ttk.Frame):
         self.strFileFormat = tk.StringVar()
         self.ddFilenameFormat=ttk.Combobox(self, textvariable=self.strFileFormat)
        
-        self.ddFilenameFormat.config(state='readonly')
+        self.ddFilenameFormat.config(state='readonly' )
         self.ddFilenameFormat.grid(row="1", column="1",sticky='W', padx=5)
         self.ddFilenameFormat.bind('<<ComboboxSelected>>', self.comboSelected)
     
+        self.lblAutoStart = tk.Label(self, text="Auto start:")
+        self.lblAutoStart.grid(row="1", column="2",sticky='W')
+        
+        self.intAutoStart = tk.IntVar()
+        self.cbAutoStart=tk.Checkbutton(self, onvalue=1, offvalue=0, variable=self.intAutoStart,
+            command=self.update_model)
+        self.cbAutoStart.grid(row=1,column=3,sticky='W')
+
+
+      
 
         # Log settings widgets
         self.lblLogToFile = tk.Label(self,text='Log to file:')
@@ -94,7 +80,7 @@ class SettingView(ttk.Frame):
         self.lstLoglevels = []
         self.ddLogLevel=ttk.Combobox(self,textvariable=self.strLogLevel)
         self.ddLogLevel.config(state='readonly')
-        self.ddLogLevel.grid(row="2", column="3",sticky='E', padx=5)
+        self.ddLogLevel.grid(row="2", column="3",sticky='W', padx=5)
         self.ddLogLevel.bind('<<ComboboxSelected>>',self.comboSelected)
 
 
@@ -105,10 +91,12 @@ class SettingView(ttk.Frame):
         self._controller =  None
 
 
-    def setWidgets(self,flightPlanPath, fileFormat, fileFormatsList ):
+    def setWidgets(self,flightPlanPath, fileFormat, fileFormatsList, autoStart:int):
         self.strDirectory.set(flightPlanPath)
         self.strFileFormat.set(fileFormat)
         self.ddFilenameFormat['values']=fileFormatsList
+        
+        self.intAutoStart.set(autoStart)
 
     def setLogWidgets(self,logLevel, logLevelsList, logToFile):
         self.lstLoglevels=logLevelsList
@@ -119,6 +107,7 @@ class SettingView(ttk.Frame):
 
         self.ddLogLevel.current(self.lstLoglevels.index(self.strLogLevel.get()))
         self.intLogToFile.set(logToFile)
+        
 
     def update_loglevelwidget(self, logToFile):
         if logToFile == 1:
@@ -144,7 +133,7 @@ class SettingView(ttk.Frame):
             self._controller.updateModel(self.strDirectory.get(),
             self.strFileFormat.get(),
             self.strLogLevel.get(),
-            self.intLogToFile.get())
+            self.intLogToFile.get(), self.intAutoStart.get())
         self.update_loglevelwidget(self.intLogToFile.get())
 
     def comboSelected(self,event):
@@ -210,13 +199,17 @@ class Controller:
       
         self.model.setCallBack(self.updateView)
         self.model.setLogListener(self.updateWidget)
+        if self.model.autoStart == 1:
+            logging.info("Auto starting watcher in 3 seconds")
+            self.renamerView.after(3000, self.renamerView.startStop)
    
 
-    def updateModel(self, directory, fileformat, loglevel, logtofile ):
+    def updateModel(self, directory, fileformat, loglevel, logtofile , autoStart:int):
         self.model.sourceDir=directory
         self.model.fileFormat=fileformat
         self.model.logLevel=loglevel
         self.model.logToFile=logtofile
+        self.model.autoStart=autoStart
 
     def switchMonitoring(self,state):
         if state=="Stop":
@@ -295,6 +288,7 @@ class MainApp(tk.Tk):
         self.geometry("620x560")
         self.resizable(width=False,height=False)
         self.title("SimBrief Renamer by ChezHJ")
+        self.iconbitmap('./sbRenamer.ico')
         #if we want parent frames to resize to there master, we need to update the app
         self.update()
        
@@ -307,7 +301,8 @@ class MainApp(tk.Tk):
         self._config = RenamerSettings(configFileName)
         controller=Controller(self._config,self._settings, self._renamerView)
 
-        self._settings.setWidgets(self._config.sourceDir,self._config.fileFormat,self._config.FILEFORMATS)
+        #should move to controller?
+        self._settings.setWidgets(self._config.sourceDir,self._config.fileFormat,self._config.FILEFORMATS,self._config.autoStart)
         self._settings.setLogWidgets(self._config.logLevel,self._config.LOGLEVELS,self._config.logToFile)
   
         self._controller=controller

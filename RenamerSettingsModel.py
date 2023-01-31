@@ -89,6 +89,17 @@ class RenamerSettings:
             logging.info("Changed filename format to %s", self.fileFormat)
     
     @property
+    def autoStart(self):
+        return self._config['BaseSettings'].getint("auto_start", 0)
+
+
+    @autoStart.setter
+    def autoStart(self, value:int):
+        
+        if self.__setValue("auto_start",str(value)):
+            logging.info("Changed autostart to %s", self.autoStart)
+
+    @property
     def logLevel(self):
         return self._config['BaseSettings'].get('loglevel', "ERROR")       
 
@@ -163,6 +174,8 @@ class RenamerSettings:
             self._config.write(configfile)
             logging.info("Saved configurarion")
             self._dirty=False
+            if self._callBack:
+                self._callBack()
 
     #debateble if this is really af method of this class
     def newFileName(self, currentFilename):

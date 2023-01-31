@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "simBrief Renamer"
-#define MyAppVersion "0.5"
+#define MyAppVersion "0.5.1"
 #define MyAppPublisher "ChezHJ"
 #define MyAppURL "https://github.com/chezhj/sbRenamer"
 #define MyAppExeName "sbRenamer.exe"
@@ -20,6 +20,7 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={sd}\sbRenamer
 DisableProgramGroupPage=yes
+CloseApplications=yes
 ; Remove the following line to run in administrative install mode (install for all users.)
 PrivilegesRequired=lowest
 OutputBaseFilename=sbRenamerInstaller
@@ -37,7 +38,7 @@ Name: "startshortcut"; Description: "Create shortcut in startup folder"; GroupDe
 [Files]
 Source: "C:\Code\sbRenamer\output\sbRenamer\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Code\sbRenamer\output\sbRenamer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "C:\Code\sbRenamer\config.ini"; DestDir: "{app}"; Flags: ignoreversion 
+Source: "C:\Code\sbRenamer\config.ini"; DestDir: "{app}"; Flags: ignoreversion onlyifdoesntexist
 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
