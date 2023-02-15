@@ -84,9 +84,9 @@ class SettingView(ttk.Frame):
         self.ddLogLevel.bind('<<ComboboxSelected>>',self.comboSelected)
 
 
-        #Safe button
-        self.btnSafe = ttk.Button(self, text="Safe", state="disabled", command=self.safe)
-        self.btnSafe.grid(row=1, column=4)
+        #Save button
+        self.btnSave = ttk.Button(self, text="Save", state="disabled", command=self.save)
+        self.btnSave.grid(row=1, column=4)
  
         self._controller =  None
 
@@ -139,15 +139,15 @@ class SettingView(ttk.Frame):
     def comboSelected(self,event):
         self.update_model()
 
-    def safe(self):
+    def save(self):
         if self._controller:
-            self._controller.safe()
+            self._controller.save()
 
-    def updateSafeBtn(self, dirty):
+    def updateSaveBtn(self, dirty):
         if dirty:
-            self.btnSafe["state"]=tk.NORMAL
+            self.btnSave["state"]=tk.NORMAL
         else:
-            self.btnSafe["state"]=tk.DISABLED
+            self.btnSave["state"]=tk.DISABLED
 
 
 
@@ -232,11 +232,11 @@ class Controller:
         self._observer.join()
         logging.info(f"Stopping File System Watcher")
 
-    def safe(self):
-        self.model.safe()
+    def save(self):
+        self.model.save()
 
     def updateView(self):
-        self.settingView.updateSafeBtn(self.model.dirty)
+        self.settingView.updateSaveBtn(self.model.dirty)
     
     def updateWidget(self, value):
         self.renamerView.addLine(value)

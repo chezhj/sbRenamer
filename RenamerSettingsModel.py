@@ -169,7 +169,7 @@ class RenamerSettings:
                     self._logFileHandler=None
                     logging.info("Removed file handler for logging")
 
-    def safe(self):
+    def save(self):
         with open(self._iniFileName, 'w') as configfile:
             self._config.write(configfile)
             logging.info("Saved configurarion")
