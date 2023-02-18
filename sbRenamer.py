@@ -6,6 +6,7 @@ import time
 import pathlib
 import shutil
 import tkinter as tk
+import traceback
 
 from watchdog.observers import Observer  
 from watchdog.events import PatternMatchingEventHandler
@@ -59,8 +60,19 @@ class Controller:
     def stopMonitoring(self):    
         self._observer.stop()
         self._observer.join()
+        self.model.monitoring=False
         logging.info(f"Stopping File System Watcher")
-
+   
+    def isMonitoring(self) -> bool:
+        return self.model.monitoring
+         
+    def isActiveMonitoring(self) -> bool:
+        if self._observer:
+            return self._observer.is_alive() 
+        else:
+            logging.warning("Observer is no longer present")
+            return False
+            
     def save(self):
         self.model.save()
 
@@ -107,8 +119,12 @@ class MyHandler(PatternMatchingEventHandler):
             destFile.rename(backupFile)
             logging.info(f"Renamed existing file to %s" %(backupFile) )
 
-        shutil.copyfile(newfilePath,destFile)
-        logging.info(f"filename: %s copied to %s" %(filename, destFile) )
+        try:
+            shutil.copyfile(newfilePath,destFile)
+            logging.info(f"filename: %s copied to %s" %(filename, destFile) )
+        except Exception as err:
+            logging.error(f"Unable to copy %s to %s, error: %s" %(filename, destFile, err ))
+            logging.debug(traceback.format_exc())
 
 
 class MainApp(tk.Tk):
@@ -138,7 +154,14 @@ class MainApp(tk.Tk):
         self._settings.set_controller(controller)
         self._renamerView.set_controller(controller)
 
+        self.protocol("WM_DELETE_WINDOW",self.close)
         logging.info("Succesfully initialised")
+
+    def close(self):
+        if self._controller.isActiveMonitoring():
+            logging.info("Stopping monitoring first")
+            self._controller.stopMonitoring()
+        self.destroy()
 
 
 if __name__ == "__main__":
