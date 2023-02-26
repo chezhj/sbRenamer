@@ -6,7 +6,6 @@ import time
 import pathlib
 import shutil
 import tkinter as tk
-import traceback
 
 from watchdog.observers import Observer  
 from watchdog.events import PatternMatchingEventHandler
@@ -124,7 +123,7 @@ class MyHandler(PatternMatchingEventHandler):
             logging.info(f"filename: %s copied to %s" %(filename, destFile) )
         except Exception as err:
             logging.error(f"Unable to copy %s to %s, error: %s" %(filename, destFile, err ))
-            logging.debug(traceback.format_exc())
+
 
 
 class MainApp(tk.Tk):

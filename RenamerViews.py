@@ -4,6 +4,9 @@ from tkinter import ttk
 from tkinter import scrolledtext
 from tkinter import filedialog
 
+# Mod 1.  Made filepath non editable & proper class var
+#         https://github.com/chezhj/sbRenamer/issues/1
+#
 
 class SettingView(ttk.Frame):
     
@@ -18,8 +21,11 @@ class SettingView(ttk.Frame):
         self.lblFlightPlanPath = tk.Label(self,text="Flight Plan directory:", pady="5")
         self.lblFlightPlanPath.grid(row="0", column="0",sticky='W')
         self.strDirectory = tk.StringVar()
-        entFlightPlanPath = tk.Entry(self, textvariable=self.strDirectory, width=62)
-        entFlightPlanPath.grid(row="0",column="1", columnspan=3, sticky='W', padx=5)
+        # Mod 1
+        self.entFlightPlanPath = tk.Entry(self, textvariable=self.strDirectory, width=62)
+        self.entFlightPlanPath.config(state='readonly')
+        self.entFlightPlanPath.grid(row="0",column="1", columnspan=3, sticky='W', padx=5)
+
         #Browse for dir button
         self.btnBrowser = ttk.Button(self, text="browse",
                                     command=self.getDirectory)
