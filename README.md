@@ -20,3 +20,13 @@ Installation
 Option 1: use installer sbRenamerInstaller.exe
 Option 2: copy all files from sbRenamer directory in output directory somewhere on your system
 
+Thanks to 
+* Ryan M Smith for python-watchdog.py from https://gist.github.com/rms1000watt
+* Stephen Friederichs (https://github.com/sfriederichs) for logging  
+   http://sfriederichs.github.io/how-to/python/gui/logging/2017/12/21/Python-GUI-Logging.html
+* Dev Prakash Sharma (https://github.com/codewithdev ?) for the system tray info 
+   https://www.tutorialspoint.com/how-to-make-a-system-tray-application-in-tkinter#
+
+
+And websites
+* https://www.pythontutorial.net/tkinter/tkinter-mvc/

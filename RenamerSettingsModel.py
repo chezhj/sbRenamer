@@ -11,15 +11,15 @@ class RenamerSettings:
     ZERO_FORMAT = "ICAOICOA01.xml"
     LOGLEVELS = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
     FILEFORMATS = [SHORT_FORMAT, ZERO_FORMAT]
-    LOGFILENAME = 'log.txt'
+    LOGFILENAME = "log.txt"
 
     WIDGIT_LOG_FORMAT = {
-        "fmt": '%(asctime)s - %(levelname)s - %(message)s',
-        "datefmt": '%Y-%m-%d %H:%M:%S'
+        "fmt": "%(asctime)s - %(levelname)s - %(message)s",
+        "datefmt": "%Y-%m-%d %H:%M:%S",
     }
     FILE_LOG_FORMAT = {
-        "fmt": '%(asctime)s - %(levelname)s - %(message)s',
-        "datefmt": '%Y-%m-%d %H:%M:%S'
+        "fmt": "%(asctime)s - %(levelname)s - %(message)s",
+        "datefmt": "%Y-%m-%d %H:%M:%S",
     }
 
     def __init__(self, cnfFileName):
@@ -28,7 +28,8 @@ class RenamerSettings:
         if self._config.read(cnfFileName) == []:
             logging.error("No configfile (%s) found" % cnfFileName)
             raise FileNotFoundError(
-                errno.ENOENT, os.strerror(errno.ENOENT), cnfFileName)
+                errno.ENOENT, os.strerror(errno.ENOENT), cnfFileName
+            )
         self._dirty = False
         self._monitoring = False
         self._callBack = None
@@ -45,11 +46,14 @@ class RenamerSettings:
         logging.info("Configuration loaded from: %s" % cnfFileName)
 
     def __setValue(self, key, value):
-        if value == self._config['BaseSettings'].get(key):
-            logging.debug("New value %s is the same as current %s",
-                          value, self._config['BaseSettings'].get(key))
+        if value == self._config["BaseSettings"].get(key):
+            logging.debug(
+                "New value %s is the same as current %s",
+                value,
+                self._config["BaseSettings"].get(key),
+            )
             return False
-        self._config['BaseSettings'][key] = value
+        self._config["BaseSettings"][key] = value
         self._dirty = True
         if self._callBack:
             self._callBack()
@@ -71,7 +75,7 @@ class RenamerSettings:
 
     @property
     def sourceDir(self):
-        return pathlib.Path(self._config['BaseSettings'].get("source_dir", "."))
+        return pathlib.Path(self._config["BaseSettings"].get("source_dir", "."))
 
     @sourceDir.setter
     def sourceDir(self, value):
@@ -79,7 +83,7 @@ class RenamerSettings:
 
     @property
     def fileFormat(self):
-        return self._config['BaseSettings'].get("file_format", self.SHORT_FORMAT)
+        return self._config["BaseSettings"].get("file_format", self.SHORT_FORMAT)
 
     @fileFormat.setter
     def fileFormat(self, value):
@@ -89,21 +93,21 @@ class RenamerSettings:
 
     @property
     def autoStart(self):
-        return self._config['BaseSettings'].getint("auto_start", 0)
+        return self._config["BaseSettings"].getboolean("auto_start", False)
 
     @autoStart.setter
-    def autoStart(self, value: int):
+    def autoStart(self, value: bool):
 
         if self.__setValue("auto_start", str(value)):
             logging.info("Changed autostart to %s", self.autoStart)
 
     @property
     def logLevel(self):
-        return self._config['BaseSettings'].get('loglevel', "ERROR")
+        return self._config["BaseSettings"].get("loglevel", "ERROR")
 
     @logLevel.setter
     def logLevel(self, value):
-        if self.__setValue('loglevel', value):
+        if self.__setValue("loglevel", value):
             if self._logFileHandler:
                 self._logFileHandler.setLevel(self.logLevel)
 
@@ -115,10 +119,10 @@ class RenamerSettings:
 
     @property
     def logToFile(self):
-        return self._config['BaseSettings'].getint("log_to_file", 0)
+        return self._config["BaseSettings"].getboolean("log_to_file", False)
 
     @logToFile.setter
-    def logToFile(self, value):
+    def logToFile(self, value: bool):
         if self.__setValue("log_to_file", str(value)):
             self._setFileLogging()
 
@@ -155,12 +159,12 @@ class RenamerSettings:
 
                 self._logFileHandler = logging.FileHandler(self.LOGFILENAME)
                 self._logFileHandler.setFormatter(
-                    logging.Formatter(**self.FILE_LOG_FORMAT))
+                    logging.Formatter(**self.FILE_LOG_FORMAT)
+                )
                 self._logFileHandler.setLevel(self.logLevel)
                 logger.addHandler(self._logFileHandler)
 
-                logging.info(
-                    "Added file handler for logging to %s", self.LOGFILENAME)
+                logging.info("Added file handler for logging to %s", self.LOGFILENAME)
         else:
             if self._logFileHandler:
                 logger.removeHandler(self._logFileHandler)
@@ -170,7 +174,7 @@ class RenamerSettings:
                 logging.info("Removed file handler for logging")
 
     def save(self):
-        with open(self._iniFileName, 'w') as configfile:
+        with open(self._iniFileName, "w") as configfile:
             self._config.write(configfile)
             logging.info("Saved configurarion")
             self._dirty = False
@@ -186,7 +190,6 @@ class RenamerSettings:
 
 
 class loggerHandler(logging.Handler):
-
     def __init__(self, logLevel, formatDict):
         logging.Handler.__init__(self)
         self.setLevel(logLevel)
@@ -197,7 +200,7 @@ class loggerHandler(logging.Handler):
 
     def emit(self, record):
         if self._listener:
-            self._listener(str(self.format(record) + '\n'))
+            self._listener(str(self.format(record) + "\n"))
 
     def set_listener(self, listener):
         self._listener = listener

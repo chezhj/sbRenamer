@@ -1,4 +1,3 @@
-
 from datetime import datetime
 import logging
 import sys
@@ -17,14 +16,17 @@ from tkinter.messagebox import showerror
 from RenamerViews import RenamerView, SettingView
 from PIL import Image, ImageTk
 
-configFileName = 'config.ini'
+configFileName = "config.ini"
 # used python-watchdog.py from https://gist.github.com/rms1000watt
 # and http://sfriederichs.github.io/how-to/python/gui/logging/2017/12/21/Python-GUI-Logging.html
 # and mvc intro https://www.pythontutorial.net/tkinter/tkinter-mvc/
+# and system try https://www.tutorialspoint.com/how-to-make-a-system-tray-application-in-tkinter#
 
 
 class Controller:
-    def __init__(self, model: RenamerSettings, settingView: SettingView, renameView: RenamerView):
+    def __init__(
+        self, model: RenamerSettings, settingView: SettingView, renameView: RenamerView
+    ):
         self.model = model
         self.settingView = settingView
         self.renamerView = renameView
@@ -32,11 +34,11 @@ class Controller:
 
         self.model.setCallBack(self.updateView)
         self.model.setLogListener(self.updateWidget)
-        if self.model.autoStart == 1:
+        if self.model.autoStart:
             logging.info("Auto starting watcher in 3 seconds")
             self.renamerView.after(3000, self.renamerView.startStop)
 
-    def updateModel(self, directory, fileformat, loglevel, logtofile, autoStart: int):
+    def updateModel(self, directory, fileformat, loglevel, logtofile, autoStart: bool):
         self.model.sourceDir = directory
         self.model.fileFormat = fileformat
         self.model.logLevel = loglevel
@@ -54,8 +56,7 @@ class Controller:
     def startMonitoring(self):
         self._observer = Observer()
         sourcedir = pathlib.Path(self.model.sourceDir)
-        self._observer.schedule(MyHandler(self.model),
-                                sourcedir, recursive=False)
+        self._observer.schedule(MyHandler(self.model), sourcedir, recursive=False)
         self._observer.start()
         self.model.monitoring = True
         logging.info(f"Starting File System Watcher")
@@ -101,8 +102,7 @@ class MyHandler(PatternMatchingEventHandler):
 
         # Need to check if the file created previously still exitst to prevent errors
         if self.fileNameCreated.exists():
-            logging.debug("FilenameCreated (%s) is existing",
-                          self.fileNameCreated)
+            logging.debug("FilenameCreated (%s) is existing", self.fileNameCreated)
             # Now lets check if the file that triggers the event, is the one we just created, because we
             # don't need to do anything with this file
             if self.fileNameCreated.samefile(pathlib.Path(event.src_path)):
@@ -120,9 +120,9 @@ class MyHandler(PatternMatchingEventHandler):
         self.fileNameCreated = destFile
         if destFile.is_file():
             logging.info(f"Destination file exits")
-            backupFile = destFile.parent / \
-                pathlib.Path(destFile.stem + "_" +
-                             time.strftime("%Y%m%d%H%M%S") + destFile.suffix)
+            backupFile = destFile.parent / pathlib.Path(
+                destFile.stem + "_" + time.strftime("%Y%m%d%H%M%S") + destFile.suffix
+            )
             destFile.rename(backupFile)
             logging.info(f"Renamed existing file to %s" % (backupFile))
 
@@ -130,8 +130,9 @@ class MyHandler(PatternMatchingEventHandler):
             shutil.copyfile(newfilePath, destFile)
             logging.info(f"filename: %s copied to %s" % (filename, destFile))
         except Exception as err:
-            logging.error(f"Unable to copy %s to %s, error: %s" %
-                          (filename, destFile, err))
+            logging.error(
+                f"Unable to copy %s to %s, error: %s" % (filename, destFile, err)
+            )
 
 
 class MainApp(tk.Tk):
@@ -141,7 +142,7 @@ class MainApp(tk.Tk):
         self.resizable(width=False, height=False)
 
         self.title("SimBrief Renamer by ChezHJ")
-        self.iconbitmap('./sbRenamer.ico')
+        self.iconbitmap("./sbRenamer.ico")
         # if we want parent frames to resize to there master, we need to update the app
         self.update()
 
@@ -152,14 +153,18 @@ class MainApp(tk.Tk):
         self._renamerView.grid(column=0, row=1, padx=5, pady=5, ipadx=5)
 
         self._config = RenamerSettings(configFileName)
-        controller = Controller(
-            self._config, self._settings, self._renamerView)
+        controller = Controller(self._config, self._settings, self._renamerView)
 
         # should move to controller?
-        self._settings.setWidgets(self._config.sourceDir, self._config.fileFormat,
-                                  self._config.FILEFORMATS, self._config.autoStart)
+        self._settings.setWidgets(
+            self._config.sourceDir,
+            self._config.fileFormat,
+            self._config.FILEFORMATS,
+            self._config.autoStart,
+        )
         self._settings.setLogWidgets(
-            self._config.logLevel, self._config.LOGLEVELS, self._config.logToFile)
+            self._config.logLevel, self._config.LOGLEVELS, self._config.logToFile
+        )
 
         self._controller = controller
         self._settings.set_controller(controller)
@@ -173,11 +178,11 @@ class MainApp(tk.Tk):
     def _resize_handler(self, event):
         self._minimizeEvent = False
         for key in dir(event):
-            if not key.startswith('_'):
+            if not key.startswith("_"):
                 savedAttr = getattr(event, key)
 
-                if key == 'widget' and isinstance(savedAttr, tk.Tk):
-                    if getattr(event, "type") == '18':
+                if key == "widget" and isinstance(savedAttr, tk.Tk):
+                    if getattr(event, "type") == "18":
                         self._minimizeEvent = True
         if self._minimizeEvent:
             self.hide_window(event)
@@ -191,11 +196,12 @@ class MainApp(tk.Tk):
             return
         self.hidden = True
         self.withdraw()
-        self.image = Image.open('./sbRenamer.ico')
-        self.menu = (item('Quit', self.quit_window), item(
-            'Show', default=True, action=self.show_window))
-        self.icon = pystray.Icon(
-            "name", self.image, "Simbrief Renamer", self.menu)
+        self.image = Image.open("./sbRenamer.ico")
+        self.menu = (
+            item("Quit", self.quit_window),
+            item("Show", default=True, action=self.show_window),
+        )
+        self.icon = pystray.Icon("name", self.image, "Simbrief Renamer", self.menu)
         self.icon.run()
         return
 
