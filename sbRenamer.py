@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import sys
+import threading
 import time
 import pathlib
 import shutil
@@ -57,6 +58,7 @@ class Controller:
         self._observer = Observer()
         sourcedir = pathlib.Path(self.model.sourceDir)
         self._observer.schedule(MyHandler(self.model), sourcedir, recursive=False)
+        self._observer.daemon = True
         self._observer.start()
         self.model.monitoring = True
         logging.info(f"Starting File System Watcher")
@@ -113,6 +115,7 @@ class MyHandler(PatternMatchingEventHandler):
 
     def copy_shortend(self, event):
         # This method needs to move to the Renamer model??
+        logging.debug("Start copy")
         newfilePath = pathlib.Path(event.src_path)
         filename = newfilePath.stem
         destFile = newfilePath.parent / self.model.newFileName(filename)
@@ -202,7 +205,10 @@ class MainApp(tk.Tk):
             item("Show", default=True, action=self.show_window),
         )
         self.icon = pystray.Icon("name", self.image, "Simbrief Renamer", self.menu)
-        self.icon.run()
+        # Fixing issue 7, by starting the icon in a separate thread, not blocking other actions
+        # Used to be self.icon.run()
+        threading.Thread(target=self.icon.run).start()
+
         return
 
     def show_window(self, item):
