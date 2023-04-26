@@ -38,13 +38,25 @@ class Controller:
         if self.model.autoStart:
             logging.info("Auto starting watcher in 3 seconds")
             self.renamerView.after(3000, self.renamerView.startStop)
+        if self.model.autoHide:
+            logging.info("Auto hiding into system tray in 5 seconds")
+            self.renamerView.after(5000, self.renamerView.minimize)
 
-    def updateModel(self, directory, fileformat, loglevel, logtofile, autoStart: bool):
+    def updateModel(
+        self,
+        directory,
+        fileformat,
+        loglevel,
+        logtofile,
+        autoStart: bool,
+        autoHide: bool,
+    ):
         self.model.sourceDir = directory
         self.model.fileFormat = fileformat
         self.model.logLevel = loglevel
         self.model.logToFile = logtofile
         self.model.autoStart = autoStart
+        self.model.autoHide = autoHide
 
     def switchMonitoring(self, state):
         if state == "Stop":
@@ -164,6 +176,7 @@ class MainApp(tk.Tk):
             self._config.fileFormat,
             self._config.FILEFORMATS,
             self._config.autoStart,
+            self._config.autoHide,
         )
         self._settings.setLogWidgets(
             self._config.logLevel, self._config.LOGLEVELS, self._config.logToFile

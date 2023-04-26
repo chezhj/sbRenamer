@@ -64,6 +64,19 @@ class SettingView(ttk.Frame):
         )
         self.cbAutoStart.grid(row=1, column=3, sticky="W")
 
+        self.lblAutoHide = tk.Label(self, text="Auto hide:")
+        self.lblAutoHide.grid(row="1", column="3")
+
+        self.boolAutoHide = tk.BooleanVar()
+        self.cbAutoHide = tk.Checkbutton(
+            self,
+            onvalue=True,
+            offvalue=False,
+            variable=self.boolAutoHide,
+            command=self.update_model,
+        )
+        self.cbAutoHide.grid(row=1, column=3, sticky="E")
+
         # Log settings widgets
         self.lblLogToFile = tk.Label(self, text="Log to file:")
         self.lblLogToFile.grid(row="2", column="0", sticky="W")
@@ -96,12 +109,20 @@ class SettingView(ttk.Frame):
 
         self._controller = None
 
-    def setWidgets(self, flightPlanPath, fileFormat, fileFormatsList, autoStart: bool):
+    def setWidgets(
+        self,
+        flightPlanPath,
+        fileFormat,
+        fileFormatsList,
+        autoStart: bool,
+        autoHide: bool,
+    ):
         self.strDirectory.set(flightPlanPath)
         self.strFileFormat.set(fileFormat)
         self.ddFilenameFormat["values"] = fileFormatsList
 
         self.boolAutoStart.set(autoStart)
+        self.boolAutoHide.set(autoHide)
 
     def setLogWidgets(self, logLevel, logLevelsList, logToFile):
         self.lstLoglevels = logLevelsList
@@ -140,6 +161,7 @@ class SettingView(ttk.Frame):
                 self.strLogLevel.get(),
                 self.boolLogToFile.get(),
                 self.boolAutoStart.get(),
+                self.boolAutoHide.get(),
             )
         self.update_loglevelwidget(self.boolLogToFile.get())
 
@@ -169,6 +191,7 @@ class RenamerView(ttk.Frame):
             relief="ridge",
             borderwidth=3,
         )
+        self.__parent = parent
         self.grid_propagate(0)
         self.grid(column=0, row=1, sticky="NW")
         self.strState = tk.StringVar()
@@ -203,3 +226,6 @@ class RenamerView(ttk.Frame):
 
         # Re-disable the widget to prevent users from entering text
         self.logWidget.config(state="disabled")
+
+    def minimize(self):
+        self.__parent.iconify()

@@ -6,7 +6,6 @@ import os
 
 
 class RenamerSettings:
-
     SHORT_FORMAT = "ICAOICOA.xml"
     ZERO_FORMAT = "ICAOICOA01.xml"
     LOGLEVELS = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
@@ -87,7 +86,6 @@ class RenamerSettings:
 
     @fileFormat.setter
     def fileFormat(self, value):
-
         if self.__setValue("file_format", value):
             logging.info("Changed filename format to %s", self.fileFormat)
 
@@ -97,9 +95,17 @@ class RenamerSettings:
 
     @autoStart.setter
     def autoStart(self, value: bool):
-
         if self.__setValue("auto_start", str(value)):
             logging.info("Changed autostart to %s", self.autoStart)
+
+    @property
+    def autoHide(self):
+        return self._config["BaseSettings"].getboolean("auto_hide", False)
+
+    @autoHide.setter
+    def autoHide(self, value: bool):
+        if self.__setValue("auto_hide", str(value)):
+            logging.info("Changed auto_hide to %s", self.autoHide)
 
     @property
     def logLevel(self):
@@ -156,7 +162,6 @@ class RenamerSettings:
                 file.unlink()
 
             if not self._logFileHandler:
-
                 self._logFileHandler = logging.FileHandler(self.LOGFILENAME)
                 self._logFileHandler.setFormatter(
                     logging.Formatter(**self.FILE_LOG_FORMAT)
