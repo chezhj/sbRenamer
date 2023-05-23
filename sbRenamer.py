@@ -6,6 +6,7 @@ import time
 import pathlib
 import shutil
 import tkinter as tk
+from tkinter import messagebox
 from pystray import MenuItem as item
 import pystray
 
@@ -25,6 +26,7 @@ configFileName = "config.ini"
 
 
 # Mod 10 20230523 Added notification while in system tray, solves issue 8
+# Mod 11 20230523 Added optional restart of the listner after save
 
 
 class Controller:
@@ -113,6 +115,14 @@ class Controller:
 
     def save(self):
         self.model.save()
+        # 11 If monitoring is active ask the user if he wants to restart
+        if self.isMonitoring():
+            if messagebox.askyesno(
+                title="sbRenamer",
+                message="Restart listener to use new settings?",
+            ):
+                self.stopMonitoring()
+                self.startMonitoring()
 
     def updateView(self):
         self.settingView.updateSaveBtn(self.model.dirty)
