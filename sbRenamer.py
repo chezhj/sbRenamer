@@ -24,6 +24,9 @@ configFileName = "config.ini"
 # and system try https://www.tutorialspoint.com/how-to-make-a-system-tray-application-in-tkinter#
 
 
+# Mod 10 20230523 Added notification while in system tray, solves issue 8
+
+
 class Controller:
     def __init__(
         self, model: RenamerSettings, settingView: SettingView, renameView: RenamerView
@@ -31,6 +34,8 @@ class Controller:
         self.model = model
         self.settingView = settingView
         self.renamerView = renameView
+        # Mod 8 Added listener prop to store listerer to activate on rename
+        self.listener = None
         # self.view.set_controller=self
 
         self.model.setCallBack(self.updateView)
@@ -69,9 +74,15 @@ class Controller:
     def startMonitoring(self):
         self._observer = Observer()
         sourcedir = pathlib.Path(self.model.sourceDir)
-        self._observer.schedule(MyHandler(self.model), sourcedir, recursive=False)
+        self._observer.schedule(
+            # Mod 10 Create Handler with internal listener
+            MyHandler(self.model, self.listenerWrap),
+            sourcedir,
+            recursive=False,
+        )
         self._observer.daemon = True
         self._observer.start()
+
         self.model.monitoring = True
         logging.info(f"Starting File System Watcher")
 
@@ -84,12 +95,21 @@ class Controller:
     def isMonitoring(self) -> bool:
         return self.model.monitoring
 
+    # 10 Listerner Wrapper
+    def listenerWrap(self, message, title):
+        if self.listener:
+            self.listener(message, title)
+
     def isActiveMonitoring(self) -> bool:
         if self._observer:
             return self._observer.is_alive()
         else:
             logging.warning("Observer is no longer present")
             return False
+
+    # 10 Set listener prop
+    def setListener(self, listener):
+        self.listener = listener
 
     def save(self):
         self.model.save()
@@ -107,9 +127,11 @@ class MyHandler(PatternMatchingEventHandler):
     # Initialise fileNameCreated, will be used to ignore the file created
     fileNameCreated = pathlib.Path(__file__)
 
-    def __init__(self, model: RenamerSettings):
+    # 10 Added listener on construct
+    def __init__(self, model: RenamerSettings, listener):
         PatternMatchingEventHandler.__init__(self)
         self.model = model
+        self.listener = listener
 
     def on_created(self, event):
         logging.info(f"Found newly created file: %s" % (event.src_path))
@@ -130,7 +152,8 @@ class MyHandler(PatternMatchingEventHandler):
         logging.debug("Start copy")
         newfilePath = pathlib.Path(event.src_path)
         filename = newfilePath.stem
-        destFile = newfilePath.parent / self.model.newFileName(filename)
+        # 10 Change destFile into Path, to use pathib functions
+        destFile = pathlib.Path(newfilePath.parent / self.model.newFileName(filename))
 
         self.fileNameCreated = destFile
         if destFile.is_file():
@@ -144,6 +167,13 @@ class MyHandler(PatternMatchingEventHandler):
         try:
             shutil.copyfile(newfilePath, destFile)
             logging.info(f"filename: %s copied to %s" % (filename, destFile))
+            # 10 If the listener is assigned, activate it with correct message
+            if self.listener:
+                self.listener(
+                    f"filename: %s copied to %s" % (filename, destFile.name),
+                    "sbRenamer",
+                )
+
         except Exception as err:
             logging.error(
                 f"Unable to copy %s to %s, error: %s" % (filename, destFile, err)
@@ -217,7 +247,10 @@ class MainApp(tk.Tk):
             item("Quit", self.quit_window),
             item("Show", default=True, action=self.show_window),
         )
+
         self.icon = pystray.Icon("name", self.image, "Simbrief Renamer", self.menu)
+        # 10 Set listener
+        self._controller.setListener(self.icon.notify)
         # Fixing issue 7, by starting the icon in a separate thread, not blocking other actions
         # Used to be self.icon.run()
         threading.Thread(target=self.icon.run).start()
