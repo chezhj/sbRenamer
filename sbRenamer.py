@@ -1,4 +1,3 @@
-from datetime import datetime
 import logging
 import sys
 import threading
@@ -16,7 +15,7 @@ from watchdog.events import PatternMatchingEventHandler
 from RenamerSettingsModel import RenamerSettings
 from tkinter.messagebox import showerror
 from RenamerViews import RenamerView, SettingView
-from PIL import Image, ImageTk
+from PIL import Image
 
 configFileName = "config.ini"
 # used python-watchdog.py from https://gist.github.com/rms1000watt
@@ -27,6 +26,7 @@ configFileName = "config.ini"
 
 # Mod 10 20230523 Added notification while in system tray, solves issue 8
 # Mod 11 20230523 Added optional restart of the listner after save
+# Mod 12 20230912 Added daemon to minimized icon thread
 
 
 class Controller:
@@ -39,6 +39,7 @@ class Controller:
         # Mod 8 Added listener prop to store listerer to activate on rename
         self.listener = None
         # self.view.set_controller=self
+        self._observer = None
 
         self.model.setCallBack(self.updateView)
         self.model.setLogListener(self.updateWidget)
@@ -86,13 +87,13 @@ class Controller:
         self._observer.start()
 
         self.model.monitoring = True
-        logging.info(f"Starting File System Watcher")
+        logging.info("Starting File System Watcher")
 
     def stopMonitoring(self):
         self._observer.stop()
         self._observer.join()
         self.model.monitoring = False
-        logging.info(f"Stopping File System Watcher")
+        logging.info("Stopping File System Watcher")
 
     def isMonitoring(self) -> bool:
         return self.model.monitoring
@@ -144,7 +145,7 @@ class MyHandler(PatternMatchingEventHandler):
         self.listener = listener
 
     def on_created(self, event):
-        logging.info(f"Found newly created file: %s" % (event.src_path))
+        logging.info("Found newly created file: %s", (event.src_path))
 
         # Need to check if the file created previously still exitst to prevent errors
         if self.fileNameCreated.exists():
@@ -167,27 +168,25 @@ class MyHandler(PatternMatchingEventHandler):
 
         self.fileNameCreated = destFile
         if destFile.is_file():
-            logging.info(f"Destination file exits")
+            logging.info("Destination file exits")
             backupFile = destFile.parent / pathlib.Path(
                 destFile.stem + "_" + time.strftime("%Y%m%d%H%M%S") + destFile.suffix
             )
             destFile.rename(backupFile)
-            logging.info(f"Renamed existing file to %s" % (backupFile))
+            logging.info("Renamed existing file to %s", (backupFile))
 
         try:
             shutil.copyfile(newfilePath, destFile)
-            logging.info(f"filename: %s copied to %s" % (filename, destFile))
+            logging.info("filename: %s copied to %s", filename, destFile)
             # 10 If the listener is assigned, activate it with correct message
             if self.listener:
                 self.listener(
-                    f"filename: %s copied to %s" % (filename, destFile.name),
+                    f"filename: {filename} copied to {destFile.name}",
                     "sbRenamer",
                 )
 
-        except Exception as err:
-            logging.error(
-                f"Unable to copy %s to %s, error: %s" % (filename, destFile, err)
-            )
+        except shutil.Error as err:
+            logging.error("Unable to copy %s to %s, error: %s", filename, destFile, err)
 
 
 class MainApp(tk.Tk):
@@ -229,45 +228,47 @@ class MainApp(tk.Tk):
         self.bind("<Unmap>", self._resize_handler)
 
         self.hidden = False
+        self.icon = None
         logging.info("Succesfully initialised")
 
     def _resize_handler(self, event):
-        self._minimizeEvent = False
+        minimize_event = False
         for key in dir(event):
             if not key.startswith("_"):
                 savedAttr = getattr(event, key)
 
                 if key == "widget" and isinstance(savedAttr, tk.Tk):
                     if getattr(event, "type") == "18":
-                        self._minimizeEvent = True
-        if self._minimizeEvent:
-            self.hide_window(event)
+                        minimize_event = True
+        if minimize_event:
+            self.hide_window()
         return
 
     def hide_window_exit(self):
-        self.hide_window(None)
+        self.hide_window()
 
-    def hide_window(self, event):
+    def hide_window(self):
         if self.hidden:
             return
         self.hidden = True
         self.withdraw()
-        self.image = Image.open("./sbRenamer.ico")
-        self.menu = (
+        icon_image = Image.open("./sbRenamer.ico")
+        icon_menu = (
             item("Quit", self.quit_window),
             item("Show", default=True, action=self.show_window),
         )
 
-        self.icon = pystray.Icon("name", self.image, "Simbrief Renamer", self.menu)
+        self.icon = pystray.Icon("name", icon_image, "Simbrief Renamer", icon_menu)
         # 10 Set listener
         self._controller.setListener(self.icon.notify)
         # Fixing issue 7, by starting the icon in a separate thread, not blocking other actions
         # Used to be self.icon.run()
+        # Mod 13
         threading.Thread(daemon=True, target=self.icon.run).start()
 
         return
 
-    def show_window(self, item):
+    def show_window(self):
         self.icon.stop()
         self.hidden = False
         self.deiconify()
@@ -278,7 +279,7 @@ class MainApp(tk.Tk):
             self._controller.stopMonitoring()
         self.destroy()
 
-    def quit_window(self, item):
+    def quit_window(self):
         self.icon.stop()
         self.close()
 
