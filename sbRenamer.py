@@ -263,7 +263,7 @@ class MainApp(tk.Tk):
         self._controller.setListener(self.icon.notify)
         # Fixing issue 7, by starting the icon in a separate thread, not blocking other actions
         # Used to be self.icon.run()
-        threading.Thread(target=self.icon.run).start()
+        threading.Thread(daemon=True, target=self.icon.run).start()
 
         return
 
