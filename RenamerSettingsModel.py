@@ -25,7 +25,7 @@ class RenamerSettings:
         self._config = configparser.ConfigParser()
         self._dirty = True
         if self._config.read(cnfFileName) == []:
-            logging.error("No configfile (%s) found" % cnfFileName)
+            logging.error("No configfile (%s) found", cnfFileName)
             raise FileNotFoundError(
                 errno.ENOENT, os.strerror(errno.ENOENT), cnfFileName
             )
@@ -33,6 +33,8 @@ class RenamerSettings:
         self._monitoring = False
         self._callBack = None
         self._logFileHandler = None
+        self._log_listener = None
+
         self._iniFileName = cnfFileName
         self._logHandler = loggerHandler(logging.INFO, self.WIDGIT_LOG_FORMAT)
         self._addLogHandlerToLogger()
@@ -42,7 +44,7 @@ class RenamerSettings:
         logging.getLogger().setLevel(logging.DEBUG)
         # Widget handler should always be on INFO
         self._logHandler.setLevel(logging.INFO)
-        logging.info("Configuration loaded from: %s" % cnfFileName)
+        logging.info("Configuration loaded from: %s", cnfFileName)
 
     def __setValue(self, key, value):
         if value == self._config["BaseSettings"].get(key):
@@ -108,6 +110,16 @@ class RenamerSettings:
             logging.info("Changed auto_hide to %s", self.autoHide)
 
     @property
+    def save_xml(self):
+        """property to indicate if you want to copy (safe) or rename"""
+        return self._config["BaseSettings"].getboolean("save_XML", True)
+
+    @save_xml.setter
+    def save_xml(self, value: bool):
+        if self.__setValue("save_XML", str(value)):
+            logging.info("Changed save_XML to %s", self.save_xml)
+
+    @property
     def logLevel(self):
         return self._config["BaseSettings"].get("loglevel", "ERROR")
 
@@ -139,11 +151,11 @@ class RenamerSettings:
         self._callBack = None
 
     def setLogListener(self, logListener):
-        self._logListener = logListener
+        self._log_listener = logListener
         self._logHandler.set_listener(logListener)
 
     def removeLogListener(self):
-        self._logListener = None
+        self._log_listener = None
 
     def _addLogHandlerToLogger(self):
         logger = logging.getLogger()
@@ -179,7 +191,7 @@ class RenamerSettings:
                 logging.info("Removed file handler for logging")
 
     def save(self):
-        with open(self._iniFileName, "w") as configfile:
+        with open(self._iniFileName, mode="w", encoding="utf-8") as configfile:
             self._config.write(configfile)
             logging.info("Saved configurarion")
             self._dirty = False

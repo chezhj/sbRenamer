@@ -12,12 +12,12 @@ from tkinter import filedialog
 class SettingView(ttk.Frame):
     def __init__(self, parent):
         parent_width = parent.winfo_width()
-        parent_height = parent.winfo_height()
+        # parent_height = parent.winfo_height()
         super().__init__(
             parent,
             padding=10,
             width=parent_width - 22,
-            height=110,
+            height=140,
             relief="ridge",
             borderwidth=3,
         )
@@ -77,9 +77,39 @@ class SettingView(ttk.Frame):
         )
         self.cbAutoHide.grid(row=1, column=3, sticky="E")
 
+        # Delete setting
+        delete_row = 2
+        self.lbl_save_xml = tk.Label(self, text="Save original XML:")
+        self.lbl_save_xml.grid(row=delete_row, column="0", sticky="W")
+
+        self.bool_save_xml = tk.BooleanVar()
+        self.cb_save_xml = tk.Checkbutton(
+            self,
+            onvalue=True,
+            offvalue=False,
+            variable=self.bool_save_xml,
+            command=self.update_model,
+        )
+        self.cb_save_xml.grid(row=delete_row, column=1, sticky="W")
+
+        self.lbl_delete_files = tk.Label(self, text="Delete files older then (days):")
+        self.lbl_delete_files.grid(row=delete_row, column="2", columnspan=2, sticky="W")
+        # self.int_nof_days = tk.IntVar()
+        self.nof_days = tk.StringVar(value="INOP")
+
+        self.ent_nof_days = tk.Entry(
+            self,
+            textvariable=self.nof_days,
+            width=5,
+        )
+        self.ent_nof_days.config(state="disabled")
+        self.ent_nof_days.grid(row=delete_row, column=3, sticky="E", padx=8)
+
         # Log settings widgets
+        log_row = 3
         self.lblLogToFile = tk.Label(self, text="Log to file:")
-        self.lblLogToFile.grid(row="2", column="0", sticky="W")
+
+        self.lblLogToFile.grid(row=log_row, column="0", sticky="W")
 
         self.boolLogToFile = tk.BooleanVar()
         self.cbLog2File = tk.Checkbutton(
@@ -90,15 +120,15 @@ class SettingView(ttk.Frame):
             variable=self.boolLogToFile,
             command=self.update_model,
         )
-        self.cbLog2File.grid(row=2, column=1, sticky="W")
+        self.cbLog2File.grid(row=log_row, column=1, sticky="W")
         self.lblLogLevel = tk.Label(self, text="Log level:", pady="5")
-        self.lblLogLevel.grid(row="2", column="2", sticky="W")
+        self.lblLogLevel.grid(row=log_row, column="2", sticky="W")
 
         self.strLogLevel = tk.StringVar()
         self.lstLoglevels = []
-        self.ddLogLevel = ttk.Combobox(self, textvariable=self.strLogLevel)
+        self.ddLogLevel = ttk.Combobox(self, textvariable=self.strLogLevel, width=22)
         self.ddLogLevel.config(state="readonly")
-        self.ddLogLevel.grid(row="2", column="3", sticky="W", padx=5)
+        self.ddLogLevel.grid(row=log_row, column="3", sticky="W", padx=5)
         self.ddLogLevel.bind("<<ComboboxSelected>>", self.comboSelected)
 
         # Save button
@@ -124,6 +154,10 @@ class SettingView(ttk.Frame):
         self.boolAutoStart.set(autoStart)
         self.boolAutoHide.set(autoHide)
 
+    def set_delete_widgets(self, save_xml):
+        """update delete widgets"""
+        self.bool_save_xml.set(save_xml)
+
     def setLogWidgets(self, logLevel, logLevelsList, logToFile):
         self.lstLoglevels = logLevelsList
         self.ddLogLevel["values"] = self.lstLoglevels
@@ -148,7 +182,7 @@ class SettingView(ttk.Frame):
         if selected != "":
             self.strDirectory.set(selected)
             self.update_model()
-            logging.info(f"New directory is set to:  %s" % self.strDirectory.get())
+            logging.info("New directory is set to:  %s", self.strDirectory.get())
 
     def set_controller(self, controller):
         self._controller = controller
@@ -162,10 +196,11 @@ class SettingView(ttk.Frame):
                 self.boolLogToFile.get(),
                 self.boolAutoStart.get(),
                 self.boolAutoHide.get(),
+                self.bool_save_xml.get(),
             )
         self.update_loglevelwidget(self.boolLogToFile.get())
 
-    def comboSelected(self, event):
+    def comboSelected(self):
         self.update_model()
 
     def save(self):

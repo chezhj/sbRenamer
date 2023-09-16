@@ -58,6 +58,7 @@ class Controller:
         logtofile,
         autoStart: bool,
         autoHide: bool,
+        save_xml: bool,
     ):
         self.model.sourceDir = directory
         self.model.fileFormat = fileformat
@@ -65,6 +66,7 @@ class Controller:
         self.model.logToFile = logtofile
         self.model.autoStart = autoStart
         self.model.autoHide = autoHide
+        self.model.save_xml = save_xml
 
     def switchMonitoring(self, state):
         if state == "Stop":
@@ -150,13 +152,15 @@ class MyHandler(PatternMatchingEventHandler):
         # Need to check if the file created previously still exitst to prevent errors
         if self.fileNameCreated.exists():
             logging.debug("FilenameCreated (%s) is existing", self.fileNameCreated)
-            # Now lets check if the file that triggers the event, is the one we just created, because we
-            # don't need to do anything with this file
+            # Now lets check if the file that triggers the event, is the one we just created,
+            # because we don't need to do anything with this file
             if self.fileNameCreated.samefile(pathlib.Path(event.src_path)):
                 logging.info("Ignoring the file just created by this process")
                 return
-
-        self.copy_shortend(event)
+        if self.model.save_xml:
+            self.copy_shortend(event)
+        else:
+            self.rename_shortend(event)
 
     def copy_shortend(self, event):
         # This method needs to move to the Renamer model??
@@ -169,11 +173,7 @@ class MyHandler(PatternMatchingEventHandler):
         self.fileNameCreated = destFile
         if destFile.is_file():
             logging.info("Destination file exits")
-            backupFile = destFile.parent / pathlib.Path(
-                destFile.stem + "_" + time.strftime("%Y%m%d%H%M%S") + destFile.suffix
-            )
-            destFile.rename(backupFile)
-            logging.info("Renamed existing file to %s", (backupFile))
+            self.rename_existing_file(destFile)
 
         try:
             shutil.copyfile(newfilePath, destFile)
@@ -187,6 +187,55 @@ class MyHandler(PatternMatchingEventHandler):
 
         except shutil.Error as err:
             logging.error("Unable to copy %s to %s, error: %s", filename, destFile, err)
+
+    def rename_shortend(self, event):
+        """Handle file created event by renaming the file that was created"""
+        # This method needs to move to the Renamer model??
+        logging.debug("Start rename")
+        new_file_path = pathlib.Path(event.src_path)
+        filename = new_file_path.stem
+        # 10 Change destFile into Path, to use pathib functions
+        dest_file = pathlib.Path(
+            new_file_path.parent / self.model.newFileName(filename)
+        )
+        # keep the new file to be created to check new event
+        self.fileNameCreated = dest_file
+        if dest_file.is_file():
+            logging.info("Destination file exits")
+            self.rename_existing_file(dest_file)
+
+        try:
+            new_file_path.rename(dest_file)
+            logging.info("filename: %s renamed to %s", filename, dest_file)
+            # 10 If the listener is assigned, activate it with correct message
+            if self.listener:
+                self.listener(
+                    f"filename: {filename} renamed to {dest_file.name}",
+                    "sbRenamer",
+                )
+
+        except OSError as err:
+            logging.error(
+                "Unable to rename %s to %s, error: %s", filename, dest_file, err
+            )
+
+    def rename_existing_file(self, file_to_rename):
+        """renames file to samename with datetime"""
+
+        logging.info("Renaming file to datetime version")
+        backup_file = file_to_rename.parent / pathlib.Path(
+            file_to_rename.stem
+            + "_"
+            + time.strftime("%Y%m%d%H%M%S")
+            + file_to_rename.suffix
+        )
+        try:
+            file_to_rename.rename(backup_file)
+        except OSError as error:
+            logging.error("problem with renaming existing file")
+            logging.error(error)
+            sys.exit(1)
+        logging.info("Renamed existing file to %s", backup_file)
 
 
 class MainApp(tk.Tk):
@@ -217,6 +266,10 @@ class MainApp(tk.Tk):
             self._config.autoStart,
             self._config.autoHide,
         )
+        self._settings.set_delete_widgets(
+            self._config.save_xml,
+        )
+
         self._settings.setLogWidgets(
             self._config.logLevel, self._config.LOGLEVELS, self._config.logToFile
         )
