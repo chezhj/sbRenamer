@@ -10,3 +10,4 @@ Build exe
  py -m coverage erase
  py -m coverage run -m unittest discover test/
  py -m coverage html 
+ py -m coverage lcov -o cov.xml

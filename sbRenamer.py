@@ -12,7 +12,7 @@ import pystray
 
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
-from RenamerSettingsModel import RenamerSettings
+from renamer_settings_model import RenamerSettings
 from tkinter.messagebox import showerror
 from RenamerViews import RenamerView, SettingView
 from PIL import Image
@@ -41,12 +41,12 @@ class Controller:
         # self.view.set_controller=self
         self._observer = None
 
-        self.model.setCallBack(self.updateView)
-        self.model.setLogListener(self.updateWidget)
-        if self.model.autoStart:
+        self.model.set_callback(self.updateView)
+        self.model.set_log_listener(self.updateWidget)
+        if self.model.auto_start:
             logging.info("Auto starting watcher in 3 seconds")
             self.renamerView.after(3000, self.renamerView.startStop)
-        if self.model.autoHide:
+        if self.model.auto_hide:
             logging.info("Auto hiding into system tray in 5 seconds")
             self.renamerView.after(5000, self.renamerView.minimize)
 
@@ -60,12 +60,12 @@ class Controller:
         autoHide: bool,
         save_xml: bool,
     ):
-        self.model.sourceDir = directory
-        self.model.fileFormat = fileformat
-        self.model.logLevel = loglevel
-        self.model.logToFile = logtofile
-        self.model.autoStart = autoStart
-        self.model.autoHide = autoHide
+        self.model.source_dir = directory
+        self.model.file_format = fileformat
+        self.model.log_level = loglevel
+        self.model.log_to_file = logtofile
+        self.model.auto_start = autoStart
+        self.model.auto_hide = autoHide
         self.model.save_xml = save_xml
 
     def switchMonitoring(self, state):
@@ -78,7 +78,7 @@ class Controller:
 
     def startMonitoring(self):
         self._observer = Observer()
-        sourcedir = pathlib.Path(self.model.sourceDir)
+        sourcedir = pathlib.Path(self.model.source_dir)
         self._observer.schedule(
             # Mod 10 Create Handler with internal listener
             MyHandler(self.model, self.listenerWrap),
@@ -168,7 +168,7 @@ class MyHandler(PatternMatchingEventHandler):
         newfilePath = pathlib.Path(event.src_path)
         filename = newfilePath.stem
         # 10 Change destFile into Path, to use pathib functions
-        destFile = pathlib.Path(newfilePath.parent / self.model.newFileName(filename))
+        destFile = pathlib.Path(newfilePath.parent / self.model.new_filename(filename))
 
         self.fileNameCreated = destFile
         if destFile.is_file():
@@ -196,7 +196,7 @@ class MyHandler(PatternMatchingEventHandler):
         filename = new_file_path.stem
         # 10 Change destFile into Path, to use pathib functions
         dest_file = pathlib.Path(
-            new_file_path.parent / self.model.newFileName(filename)
+            new_file_path.parent / self.model.new_filename(filename)
         )
         # keep the new file to be created to check new event
         self.fileNameCreated = dest_file
@@ -260,18 +260,18 @@ class MainApp(tk.Tk):
 
         # should move to controller?
         self._settings.setWidgets(
-            self._config.sourceDir,
-            self._config.fileFormat,
+            self._config.source_dir,
+            self._config.file_format,
             self._config.FILEFORMATS,
-            self._config.autoStart,
-            self._config.autoHide,
+            self._config.auto_start,
+            self._config.auto_hide,
         )
         self._settings.set_delete_widgets(
             self._config.save_xml,
         )
 
         self._settings.setLogWidgets(
-            self._config.logLevel, self._config.LOGLEVELS, self._config.logToFile
+            self._config.log_level, self._config.LOGLEVELS, self._config.log_to_file
         )
 
         self._controller = controller

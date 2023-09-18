@@ -2,3 +2,4 @@ log.txt
 Installer/Output/sbRenamerInstaller.exe
 **/__pycache__
 .coverage
+cov.xml
