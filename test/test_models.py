@@ -1,6 +1,6 @@
 """Unit tests for RenamerSettings Module"""
 import unittest
-from unittest.mock import ANY, patch
+from unittest.mock import ANY, Mock, mock_open, patch
 
 # pylint: disable=missing-function-docstring
 ## from unittest.mock import MagicMock, patch
@@ -53,8 +53,11 @@ class TestRenamerSettings(unittest.TestCase):
         mock_get.side_effect = lambda section, key, **kwargs: mock_key_values.get(
             key, ""
         )
+        handle_mock = Mock()
+        mock_file_open.return_value.__enter__.return_value = handle_mock
 
         rsm = RenamerSettings("test/empty_config.ini")
+
         self.assertTrue(rsm.log_to_file)
         rsm.source_dir = r"c:\ddd"
         rsm.save()
@@ -62,4 +65,35 @@ class TestRenamerSettings(unittest.TestCase):
             "test/empty_config.ini", mode="w", encoding="utf-8"
         )
         self.assertFalse(rsm.dirty)
-        mock_write.assert_called_once_with(ANY)
+        mock_write.assert_called_once_with(handle_mock)
+
+    @patch("renamer_settings_model.configparser.ConfigParser.get")
+    @patch("renamer_settings_model.configparser.ConfigParser.write")
+    @unittest.skip
+    def test_config_writer_two(self, mock_write, mock_get):
+        mock_key_values = {
+            "log_to_file": "True",
+            "auto_start": "False",
+            "loglevel": "ERROR",
+        }
+
+        mock_get.side_effect = lambda section, key, **kwargs: mock_key_values.get(
+            key, ""
+        )
+
+        # Create a custom context manager for open using lambda
+        custom_open = lambda name, mode, encoding: mock_open()()
+
+        # Create a mock file handle
+        mock_file_handle = mock_open()()
+
+        with patch("renamer_settings_model.open", custom_open) as mock_patch_open:
+            rsm = RenamerSettings("test/empty_config.ini")
+            self.assertTrue(rsm.log_to_file)
+            rsm.source_dir = r"c:\ddd"
+            rsm.save()
+            mock_patch_open.assert_called_once_with(
+                "test/empty_config.ini", mode="w", encoding="utf-8"
+            )
+            self.assertFalse(rsm.dirty)
+            mock_write.assert_called_once_with(mock_file_handle)

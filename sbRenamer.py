@@ -16,6 +16,7 @@ from renamer_settings_model import RenamerSettings
 from tkinter.messagebox import showerror
 from RenamerViews import RenamerView, SettingView
 from PIL import Image
+from _version import __version__
 
 configFileName = "config.ini"
 # used python-watchdog.py from https://gist.github.com/rms1000watt
@@ -282,7 +283,7 @@ class MainApp(tk.Tk):
 
         self.hidden = False
         self.icon = None
-        logging.info("Succesfully initialised")
+        logging.info("Succesfully initialised version %s", __version__)
 
     def _resize_handler(self, event):
         minimize_event = False

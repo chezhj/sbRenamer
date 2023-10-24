@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "simBrief Renamer"
-#define MyAppVersion "0.8.0"
+#include "_version.iss"
 #define MyAppPublisher "ChezHJ"
 #define MyAppURL "https://github.com/chezhj/sbRenamer"
 #define MyAppExeName "sbRenamer.exe"
