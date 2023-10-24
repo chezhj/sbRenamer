@@ -20,7 +20,7 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={sd}\sbRenamer
 DisableProgramGroupPage=yes
-CloseApplications=yes
+CloseApplications=force
 ; Remove the following line to run in administrative install mode (install for all users.)
 PrivilegesRequired=lowest
 OutputBaseFilename=sbRenamerInstaller
@@ -36,7 +36,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startshortcut"; Description: "Create shortcut in startup folder"; GroupDescription: "{cm:AutoStartProgramGroupDescription}"; 
 
 [Files]
-Source: "C:\Code\sbRenamer\output\sbRenamer\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Code\sbRenamer\output\sbRenamer\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion ;
 Source: "C:\Code\sbRenamer\output\sbRenamer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "C:\Code\sbRenamer\config.ini"; DestDir: "{app}"; Flags: ignoreversion onlyifdoesntexist
 
@@ -48,5 +48,5 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}" ; Tasks: startshortcut
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent 
 

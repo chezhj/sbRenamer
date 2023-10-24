@@ -1,6 +1,6 @@
 """Unit tests for RenamerSettings Module"""
 import unittest
-from unittest.mock import ANY, Mock, mock_open, patch
+from unittest.mock import Mock, mock_open, patch
 
 # pylint: disable=missing-function-docstring
 ## from unittest.mock import MagicMock, patch
