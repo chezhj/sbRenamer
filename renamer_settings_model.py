@@ -8,6 +8,7 @@ import configparser
 import pathlib
 import errno
 import os
+import re
 
 from listener_logger_handler import LoggerHandler
 
@@ -136,6 +137,20 @@ class RenamerSettings:
             logging.info("Changed save_XML to %s", self.save_xml)
 
     @property
+    def number_of_days(self):
+        """Number of days that a file must be aged before it will be deleted. 0 means no delete"""
+        return self._config["BaseSettings"].get("number_of_days", "0")
+
+    @number_of_days.setter
+    def number_of_days(self, value):
+        if not value:
+            self.__set_value("number_of_days", "0")
+        elif self.validate_number(value):
+            self.__set_value("number_of_days", value)
+        else:
+            raise TypeError("Number of days should be a number")
+
+    @property
     def log_level(self):
         """property to set log level, DEBUG,INFO, WARINING,"""
         return self._config["BaseSettings"].get("loglevel", "ERROR")
@@ -226,10 +241,14 @@ class RenamerSettings:
             if self._call_back:
                 self._call_back()
 
-    # debateble if this is really af method of this class
+    # debatable if this is really af method of this class
     def new_filename(self, current_filename):
         """returns target filename based on format"""
         if self.file_format == self.SHORT_FORMAT:
             return pathlib.Path(current_filename[:8] + ".xml")
         if self.file_format == self.ZERO_FORMAT:
             return pathlib.Path(current_filename[:8] + "01.xml")
+
+    def validate_number(self, value):
+        """function to validate if a string contains a positive number"""
+        return bool(re.search(r"\d", value))

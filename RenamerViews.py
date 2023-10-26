@@ -79,6 +79,7 @@ class SettingView(ttk.Frame):
 
         # Delete setting
         delete_row = 2
+
         self.lbl_save_xml = tk.Label(self, text="Save original XML:")
         self.lbl_save_xml.grid(row=delete_row, column="0", sticky="W")
 
@@ -94,15 +95,20 @@ class SettingView(ttk.Frame):
 
         self.lbl_delete_files = tk.Label(self, text="Delete files older then (days):")
         self.lbl_delete_files.grid(row=delete_row, column="2", columnspan=2, sticky="W")
-        # self.int_nof_days = tk.IntVar()
-        self.nof_days = tk.StringVar(value="INOP")
 
+        self.nof_days = tk.StringVar()
+        self.nof_days.trace_add("write", self.update_model)
+
+        # Register validation function so only numbers can be set
+        validation = self.register(self.only_numbers)
         self.ent_nof_days = tk.Entry(
             self,
+            validate="key",
+            validatecommand=(validation, "%S"),
             textvariable=self.nof_days,
             width=5,
         )
-        self.ent_nof_days.config(state="disabled")
+
         self.ent_nof_days.grid(row=delete_row, column=3, sticky="E", padx=8)
 
         # Log settings widgets
@@ -139,6 +145,12 @@ class SettingView(ttk.Frame):
 
         self._controller = None
 
+    def only_numbers(self, char):
+        if char:
+            return char.isdigit()
+        else:
+            return True
+
     def setWidgets(
         self,
         flightPlanPath,
@@ -154,9 +166,10 @@ class SettingView(ttk.Frame):
         self.boolAutoStart.set(autoStart)
         self.boolAutoHide.set(autoHide)
 
-    def set_delete_widgets(self, save_xml):
+    def set_delete_widgets(self, save_xml, nof_days):
         """update delete widgets"""
         self.bool_save_xml.set(save_xml)
+        self.nof_days.set(nof_days)
 
     def setLogWidgets(self, logLevel, logLevelsList, logToFile):
         self.lstLoglevels = logLevelsList
@@ -187,9 +200,9 @@ class SettingView(ttk.Frame):
     def set_controller(self, controller):
         self._controller = controller
 
-    def update_model(self):
+    def update_model(self, *args):
         if self._controller:
-            self._controller.updateModel(
+            self._controller.update_model(
                 self.strDirectory.get(),
                 self.strFileFormat.get(),
                 self.strLogLevel.get(),
@@ -197,6 +210,7 @@ class SettingView(ttk.Frame):
                 self.boolAutoStart.get(),
                 self.boolAutoHide.get(),
                 self.bool_save_xml.get(),
+                self.nof_days.get(),
             )
         self.update_loglevelwidget(self.boolLogToFile.get())
 
@@ -242,7 +256,7 @@ class RenamerView(ttk.Frame):
 
     def startStop(self):
         if self._controller:
-            newState = self._controller.switchMonitoring(self.strState.get())
+            newState = self._controller.switch_monitoring(self.strState.get())
             self.strState.set(newState)
 
     def set_controller(self, controller):
