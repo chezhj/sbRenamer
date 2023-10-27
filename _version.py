@@ -1,4 +1,4 @@
 """
 Versionnumber placeholder
 """
-__version__ = "1.0.0-b0"
+__version__ = "1.0.0-b1"
