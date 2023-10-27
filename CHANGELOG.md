@@ -1,4 +1,8 @@
-## v0.8.1 (2023-10-24)
+## v1.0.0-b0 (2023-10-27)
+
+### Feat
+
+- Added functionality to remove old files from path
 
 ### Fix
 
