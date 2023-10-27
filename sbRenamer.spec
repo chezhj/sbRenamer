@@ -8,7 +8,7 @@ a = Analysis(
     ['C:/Code/sbRenamer/sbRenamer.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('C:/Code/sbRenamer/sbRenamer.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
