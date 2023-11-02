@@ -214,7 +214,7 @@ class SettingView(ttk.Frame):
             )
         self.update_loglevelwidget(self.boolLogToFile.get())
 
-    def comboSelected(self):
+    def comboSelected(self, *args):
         self.update_model()
 
     def save(self):

@@ -18,8 +18,10 @@ class RenamerSettings:
 
     SHORT_FORMAT = "ICAOICOA.xml"
     ZERO_FORMAT = "ICAOICOA01.xml"
+    # Mod 15
+    B738_FORMAT = "b738x.xml"
     LOGLEVELS = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
-    FILEFORMATS = [SHORT_FORMAT, ZERO_FORMAT]
+    FILEFORMATS = [B738_FORMAT, SHORT_FORMAT, ZERO_FORMAT]
     LOGFILENAME = "log.txt"
 
     WIDGIT_LOG_FORMAT = {
@@ -248,6 +250,10 @@ class RenamerSettings:
             return pathlib.Path(current_filename[:8] + ".xml")
         if self.file_format == self.ZERO_FORMAT:
             return pathlib.Path(current_filename[:8] + "01.xml")
+
+        # Mod 15
+        if self.file_format == self.B738_FORMAT:
+            return pathlib.Path("b738x.xml")
 
     def validate_number(self, value):
         """function to validate if a string contains a positive number"""
