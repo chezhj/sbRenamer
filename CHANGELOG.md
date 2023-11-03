@@ -1,3 +1,10 @@
+## v1.1.0 (2023-11-03)
+
+### Feat
+
+- **Listener**: Added fms listener
+- **model**: Added new destination format
+
 ## v1.0.0-b2 (2023-10-27)
 
 ## v1.0.0-b1 (2023-10-27)
