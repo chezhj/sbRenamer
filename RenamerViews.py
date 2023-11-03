@@ -17,7 +17,7 @@ class SettingView(ttk.Frame):
             parent,
             padding=10,
             width=parent_width - 22,
-            height=140,
+            height=160,
             relief="ridge",
             borderwidth=3,
         )
@@ -111,8 +111,21 @@ class SettingView(ttk.Frame):
 
         self.ent_nof_days.grid(row=delete_row, column=3, sticky="E", padx=8)
 
+        # fms widget Mod 13
+
+        # Renamer settings widgets
+        self.lbl_fms_format = tk.Label(self, text="Flightplan Rename:", pady="5")
+        self.lbl_fms_format.grid(row="3", column="0", sticky="W")
+
+        self.str_fms_format = tk.StringVar()
+        self.dd_fms_format = ttk.Combobox(self, textvariable=self.str_fms_format)
+
+        self.dd_fms_format.config(state="readonly")
+        self.dd_fms_format.grid(row="3", column="1", sticky="W", padx=5)
+        self.dd_fms_format.bind("<<ComboboxSelected>>", self.comboSelected)
+
         # Log settings widgets
-        log_row = 3
+        log_row = 4
         self.lblLogToFile = tk.Label(self, text="Log to file:")
 
         self.lblLogToFile.grid(row=log_row, column="0", sticky="W")
@@ -148,23 +161,27 @@ class SettingView(ttk.Frame):
     def only_numbers(self, char):
         if char:
             return char.isdigit()
-        else:
-            return True
+        return True
 
-    def setWidgets(
+    def set_widgets(
         self,
-        flightPlanPath,
-        fileFormat,
-        fileFormatsList,
-        autoStart: bool,
-        autoHide: bool,
+        flighplan_path,
+        file_format,
+        file_formats_list,
+        auto_start: bool,
+        auto_hide: bool,
+        fms_format,
+        fms_formats_list,
     ):
-        self.strDirectory.set(flightPlanPath)
-        self.strFileFormat.set(fileFormat)
-        self.ddFilenameFormat["values"] = fileFormatsList
+        """should be called to updated the settings widgets"""
+        self.strDirectory.set(flighplan_path)
+        self.strFileFormat.set(file_format)
+        self.ddFilenameFormat["values"] = file_formats_list
 
-        self.boolAutoStart.set(autoStart)
-        self.boolAutoHide.set(autoHide)
+        self.boolAutoStart.set(auto_start)
+        self.boolAutoHide.set(auto_hide)
+        self.str_fms_format.set(fms_format)
+        self.dd_fms_format["values"] = fms_formats_list
 
     def set_delete_widgets(self, save_xml, nof_days):
         """update delete widgets"""
@@ -201,6 +218,7 @@ class SettingView(ttk.Frame):
         self._controller = controller
 
     def update_model(self, *args):
+        """Interface to call the controller update method"""
         if self._controller:
             self._controller.update_model(
                 self.strDirectory.get(),
@@ -211,10 +229,11 @@ class SettingView(ttk.Frame):
                 self.boolAutoHide.get(),
                 self.bool_save_xml.get(),
                 self.nof_days.get(),
+                self.str_fms_format.get(),
             )
         self.update_loglevelwidget(self.boolLogToFile.get())
 
-    def comboSelected(self):
+    def comboSelected(self, *args):
         self.update_model()
 
     def save(self):
@@ -236,7 +255,7 @@ class RenamerView(ttk.Frame):
             parent,
             padding=10,
             width=parent_width - 22,
-            height=parent_height - 150,
+            height=parent_height - 180,
             relief="ridge",
             borderwidth=3,
         )
@@ -249,7 +268,7 @@ class RenamerView(ttk.Frame):
             self, textvariable=self.strState, command=self.startStop
         )
         self.btnStart.grid(row=1, column=3, pady=3, sticky="E")
-        self.logWidget = scrolledtext.ScrolledText(self, font=("Courier", 8))
+        self.logWidget = scrolledtext.ScrolledText(self, font=("Courier", 8), height=26)
         self.logWidget.config(state="disabled")
         self.logWidget.grid(row=2, column=0, columnspan=4, sticky="NE")
         self._controller = None

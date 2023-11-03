@@ -18,9 +18,15 @@ class RenamerSettings:
 
     SHORT_FORMAT = "ICAOICOA.xml"
     ZERO_FORMAT = "ICAOICOA01.xml"
+    # Mod 15
+    B738_FORMAT = "b738x.xml"
     LOGLEVELS = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
-    FILEFORMATS = [SHORT_FORMAT, ZERO_FORMAT]
+    FILEFORMATS = [B738_FORMAT, SHORT_FORMAT, ZERO_FORMAT]
     LOGFILENAME = "log.txt"
+    FMS_NO = "NO"
+    FMS_B738 = "b738x"
+    FMS_BOTH = "BOTH"
+    FMS_OPTIONS = [FMS_NO, FMS_B738, FMS_BOTH]
 
     WIDGIT_LOG_FORMAT = {
         "fmt": "%(asctime)s - %(levelname)s - %(message)s",
@@ -151,6 +157,16 @@ class RenamerSettings:
             raise TypeError("Number of days should be a number")
 
     @property
+    def fms_format(self):
+        """Setting wich format should be used"""
+        return self._config["BaseSettings"].get("fms_format", self.FMS_BOTH)
+
+    @fms_format.setter
+    def fms_format(self, value):
+        if self.__set_value("fms_format", value):
+            logging.info("Changed filename format to %s", self.fms_format)
+
+    @property
     def log_level(self):
         """property to set log level, DEBUG,INFO, WARINING,"""
         return self._config["BaseSettings"].get("loglevel", "ERROR")
@@ -248,6 +264,14 @@ class RenamerSettings:
             return pathlib.Path(current_filename[:8] + ".xml")
         if self.file_format == self.ZERO_FORMAT:
             return pathlib.Path(current_filename[:8] + "01.xml")
+
+        # Mod 15
+        if self.file_format == self.B738_FORMAT:
+            return pathlib.Path("b738x.xml")
+
+    def fms_filename(self):
+        """function that returs the fms filename"""
+        return pathlib.Path("b738x.fms")
 
     def validate_number(self, value):
         """function to validate if a string contains a positive number"""
