@@ -33,6 +33,7 @@ CONFIGFILENAME = "config.ini"
 # Mod 12 20230912 Added daemon to minimized icon thread
 # Mod 13          Actualy delete a file iso renaming
 # Mod 14 20231025 Add Removing old files
+# Mod 15 20231102 New filename & fms listener
 
 
 class Controller:
@@ -82,6 +83,7 @@ class Controller:
         auto_hide: bool,
         save_xml: bool,
         nof_days,
+        fmsformat,
     ):
         """Method that should be called to update the model"""
         self.model.source_dir = directory
@@ -92,6 +94,7 @@ class Controller:
         self.model.auto_hide = auto_hide
         self.model.save_xml = save_xml
         self.model.number_of_days = nof_days
+        self.model.fms_format = fmsformat
 
     def start_clean(self):
         """Start the actual deletion fot files"""
@@ -108,7 +111,7 @@ class Controller:
         return "Stop"
 
     def start_monitoring(self):
-        """Starts a new obsever as deamon whith a the custom rename/delete handler"""
+        """Starts a new observer as deamon whith a the custom rename/delete handler"""
 
         self._observer = Observer()
         sourcedir = pathlib.Path(self.model.source_dir)
@@ -239,9 +242,10 @@ class RenameXmlHandler(PatternMatchingEventHandler):
     """Handler to catch newly created files and rename them"""
 
     # Set filename pattern
-    patterns = ["*.xml"]
-    # Initialise fileNameCreated, will be used to ignore the file created
-    fileNameCreated = pathlib.Path(__file__)
+    # Mod 15
+    patterns = ["*.xml", "*.fms"]
+    # Initialise fileNamesCreated, will be used to ignore the files created
+    file_names_created = []
 
     # 10 Added listener on construct
     def __init__(self, model: RenamerSettings, listener):
@@ -252,65 +256,73 @@ class RenameXmlHandler(PatternMatchingEventHandler):
     def on_created(self, event):
         logging.info("Found newly created file: %s", (event.src_path))
 
-        # Need to check if the file created previously still exitst to prevent errors
-        if self.fileNameCreated.exists():
-            logging.debug("FilenameCreated (%s) is existing", self.fileNameCreated)
-            # Now lets check if the file that triggers the event, is the one we just created,
-            # because we don't need to do anything with this file
-            if self.fileNameCreated.samefile(pathlib.Path(event.src_path)):
-                logging.info("Ignoring the file just created by this process")
-                return
-        if self.model.save_xml:
-            self.copy_shortend(event)
-        else:
-            self.rename_shortend(event)
+        newfile_path = pathlib.Path(event.src_path)
+        newfile_stem = newfile_path.stem
 
-    def copy_shortend(self, event):
+        # Mod 15 rewrite of ignoring earlier created files
+        if newfile_stem in self.file_names_created:
+            logging.info("Ignoring (new) the file just created by this process")
+            return
+
+        # Mod 15 Check for extention
+        if pathlib.Path(event.src_path).suffix == ".xml":
+            if self.model.save_xml:
+                self.copy_shortend(event, self.model.new_filename(newfile_stem))
+            else:
+                self.rename_shortend(event, self.model.new_filename(newfile_stem))
+        else:
+            # mod 15 This is a fms file
+            if self.model.fms_format == self.model.FMS_BOTH:
+                self.copy_shortend(event, self.model.fms_filename())
+            elif self.model.fms_format == self.model.FMS_B738:
+                self.rename_shortend(event, self.model.fms_filename())
+
+    def copy_shortend(self, event, target_filename):
         """copy based on event source path"""
 
         logging.debug("Start copy")
-        newfilePath = pathlib.Path(event.src_path)
-        filename = newfilePath.stem
+        newfile_path = pathlib.Path(event.src_path)
+        filename = newfile_path.stem
         # 10 Change destFile into Path, to use pathib functions
-        destFile = pathlib.Path(newfilePath.parent / self.model.new_filename(filename))
+        dest_file = pathlib.Path(newfile_path.parent / target_filename)
 
-        self.fileNameCreated = destFile
-        if destFile.is_file():
+        self.file_names_created.append(dest_file.stem)
+        if dest_file.is_file():
             logging.info("Destination file exits")
-            self.rename_existing_file(destFile)
+            self.rename_existing_file(dest_file)
 
         try:
-            shutil.copyfile(newfilePath, destFile)
-            logging.info("filename: %s copied to %s", filename, destFile)
+            shutil.copyfile(newfile_path, dest_file)
+            logging.info("filename: %s copied to %s", filename, dest_file.name)
             # 10 If the listener is assigned, activate it with correct message
             if self.listener:
                 self.listener(
-                    f"filename: {filename} copied to {destFile.name}",
+                    f"filename: {filename} copied to {dest_file.name}",
                     "sbRenamer",
                 )
 
         except shutil.Error as err:
-            logging.error("Unable to copy %s to %s, error: %s", filename, destFile, err)
+            logging.error(
+                "Unable to copy %s to %s, error: %s", filename, dest_file, err
+            )
 
-    def rename_shortend(self, event):
+    def rename_shortend(self, event, target_filename):
         """Handle file created event by renaming the file that was created"""
         # This method needs to move to the Renamer model??
         logging.debug("Start rename")
         new_file_path = pathlib.Path(event.src_path)
         filename = new_file_path.stem
         # 10 Change destFile into Path, to use pathib functions
-        dest_file = pathlib.Path(
-            new_file_path.parent / self.model.new_filename(filename)
-        )
+        dest_file = pathlib.Path(new_file_path.parent / target_filename)
         # keep the new file to be created to check new event
-        self.fileNameCreated = dest_file
+        self.file_names_created.append(dest_file.stem)
         if dest_file.is_file():
             logging.info("Destination file exits")
             self.rename_existing_file(dest_file)
 
         try:
             new_file_path.rename(dest_file)
-            logging.info("filename: %s renamed to %s", filename, dest_file)
+            logging.info("filename: %s renamed to %s", filename, dest_file.name)
             # 10 If the listener is assigned, activate it with correct message
             if self.listener:
                 self.listener(
@@ -339,13 +351,13 @@ class RenameXmlHandler(PatternMatchingEventHandler):
             logging.error("problem with renaming existing file")
             logging.error(error)
             sys.exit(1)
-        logging.info("Renamed existing file to %s", backup_file)
+        logging.info("Renamed existing file to %s", backup_file.name)
 
 
 class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.geometry("620x560")
+        self.geometry("620x600")
         self.resizable(width=False, height=False)
 
         self.title("SimBrief Renamer by ChezHJ")
@@ -363,12 +375,14 @@ class MainApp(tk.Tk):
         controller = Controller(self._config, self._settings, self._renamerView)
 
         # should move to controller?
-        self._settings.setWidgets(
+        self._settings.set_widgets(
             self._config.source_dir,
             self._config.file_format,
             self._config.FILEFORMATS,
             self._config.auto_start,
             self._config.auto_hide,
+            self._config.fms_format,
+            self._config.FMS_OPTIONS,
         )
         self._settings.set_delete_widgets(
             self._config.save_xml, self._config.number_of_days
