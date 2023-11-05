@@ -1,3 +1,9 @@
+## v1.2.0 (2023-11-05)
+
+### Feat
+
+- **listener**: Rewrite to on_modified
+
 ## v1.1.0 (2023-11-03)
 
 ### Feat

@@ -2,12 +2,12 @@
 name = "cz_conventional_commits"
 tag_format = "v$version"
 version_scheme = "semver"
-version = "1.1.0"
+version = "1.2.0"
 update_changelog_on_bump = true
 version_files = [
     "_version.py",
     "Installer/_version.iss:MyAppVersion",
 ]
 pre_bump_hooks = [
-  "build/make.cmd"
+  "build\\make.cmd"
 ]
