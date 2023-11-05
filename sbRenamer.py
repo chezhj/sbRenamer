@@ -339,7 +339,7 @@ class RenameXmlHandler(PatternMatchingEventHandler):
         dest_file = pathlib.Path(newfile_path.parent / target_filename)
 
         self.file_names_to_ignore.append(dest_file.name)
-        if dest_file.is_file():
+        if self.model.save_existing_target and dest_file.is_file():
             logging.info("Destination file exits")
             self.rename_existing_file(dest_file)
 

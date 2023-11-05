@@ -167,6 +167,11 @@ class RenamerSettings:
             logging.info("Changed filename format to %s", self.fms_format)
 
     @property
+    def save_existing_target(self):
+        """property to indicate if a existing target may be copied over"""
+        return self._config["BaseSettings"].getboolean("save_existing", False)
+
+    @property
     def log_level(self):
         """property to set log level, DEBUG,INFO, WARINING,"""
         return self._config["BaseSettings"].get("loglevel", "ERROR")
