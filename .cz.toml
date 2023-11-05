@@ -8,3 +8,6 @@ version_files = [
     "_version.py",
     "Installer/_version.iss:MyAppVersion",
 ]
+pre_bump_hooks = [
+  "test.cmd"
+]

@@ -1,4 +1,5 @@
 """Main module, includes controller, eventhandler and main app"""
+from collections.abc import Iterator
 import datetime
 import logging
 import os
@@ -238,6 +239,31 @@ class FileDeleter:
         return number_of_days > self.days
 
 
+class TimedList(list):
+    def __init__(self):
+        self.list = []
+
+    def ttl_remove(self, list_item):
+        time.sleep(2)
+        self.list.remove(list_item)
+        logging.info("Removing %s", list_item)
+
+    def append(self, __object) -> None:
+        self.list.append(__object)
+        remove_thread = threading.Thread(
+            target=self.ttl_remove,
+            args=(__object,),
+        )
+        remove_thread.start()
+
+    def __contains__(self, __key: object) -> bool:
+        return __key in self.list
+
+    def __iter__(self) -> Iterator:
+        for list_item in self.list:
+            yield list_item
+
+
 class RenameXmlHandler(PatternMatchingEventHandler):
     """Handler to catch newly created files and rename them"""
 
@@ -245,7 +271,7 @@ class RenameXmlHandler(PatternMatchingEventHandler):
     # Mod 15
     patterns = ["*.xml", "*.fms"]
     # Initialise fileNamesCreated, will be used to ignore the files created
-    file_names_created = []
+    file_names_created = TimedList()
 
     # 10 Added listener on construct
     def __init__(self, model: RenamerSettings, listener):
@@ -254,6 +280,35 @@ class RenameXmlHandler(PatternMatchingEventHandler):
         self.listener = listener
 
     def on_created(self, event):
+        logging.info("Found newly created file (ignoring): %s", (event.src_path))
+
+        return super().on_modified(event)
+
+    def on_modified(self, event):
+        logging.info("Found newly modified file: %s", (event.src_path))
+        file = pathlib.Path(event.src_path).stem
+
+        if (file not in self.file_names_created) and ("(1)" not in file):
+            logging.info("processing %s", file)
+            self.file_names_created.append(file)
+        else:
+            logging.info("Skipping: %s", file)
+
+        return super().on_modified(event)
+
+    def on_closed(self, event):
+        logging.info("Found newly closed file: %s", (event.src_path))
+        return super().on_closed(event)
+
+    def on_any_event(self, event):
+        self.print_cache()
+        return super().on_any_event(event)
+
+    def print_cache(self):
+        for f in self.file_names_created:
+            logging.info("In cache: %s", f)
+
+    def on_created_old(self, event):
         logging.info("Found newly created file: %s", (event.src_path))
 
         newfile_path = pathlib.Path(event.src_path)
