@@ -8,6 +8,7 @@ import time
 import pathlib
 import shutil
 import tkinter as tk
+from collections.abc import Iterator
 from tkinter import messagebox
 from tkinter.messagebox import showerror
 from pystray import MenuItem as item
@@ -238,14 +239,46 @@ class FileDeleter:
         return number_of_days > self.days
 
 
+class TimedList(list):
+    """Custom implementation of a list that removes items after a fixed delay"""
+
+    def __init__(self, ttl):
+        self.list = []
+        self._ttl = ttl
+
+    def __ttl_remove(self, list_item):
+        """Method that should only be called internally to remove item with delay"""
+        time.sleep(self._ttl)
+        self.list.remove(list_item)
+        logging.debug("Removing %s from list", list_item)
+
+    def append(self, __object) -> None:
+        self.list.append(__object)
+        logging.debug("Added item %s", __object)
+        remove_thread = threading.Thread(
+            target=self.__ttl_remove,
+            args=(__object,),
+        )
+        remove_thread.start()
+
+    def __contains__(self, __key: object) -> bool:
+        return __key in self.list
+
+    def __iter__(self) -> Iterator:
+        for list_item in self.list:
+            yield list_item
+
+
 class RenameXmlHandler(PatternMatchingEventHandler):
     """Handler to catch newly created files and rename them"""
 
     # Set filename pattern
     # Mod 15
     patterns = ["*.xml", "*.fms"]
+    DELAY_EXECUTION = 2
+    CACHE_TTL = 3
     # Initialise fileNamesCreated, will be used to ignore the files created
-    file_names_created = []
+    file_names_to_ignore = TimedList(CACHE_TTL)
 
     # 10 Added listener on construct
     def __init__(self, model: RenamerSettings, listener):
@@ -253,40 +286,59 @@ class RenameXmlHandler(PatternMatchingEventHandler):
         self.model = model
         self.listener = listener
 
-    def on_created(self, event):
-        logging.info("Found newly created file: %s", (event.src_path))
+    def execute_with_delay(self, method_to_execute, *args):
+        """Default wrapper for delayed execution"""
+        threading.Timer(self.DELAY_EXECUTION, method_to_execute, args=args).start()
+
+    def on_modified(self, event):
+        logging.info("Trigger modified file: %s", (event.src_path))
 
         newfile_path = pathlib.Path(event.src_path)
         newfile_stem = newfile_path.stem
 
         # Mod 15 rewrite of ignoring earlier created files
-        if newfile_stem in self.file_names_created:
-            logging.info("Ignoring (new) the file just created by this process")
+        if (newfile_path.name in self.file_names_to_ignore) and (
+            "(1)" not in newfile_stem
+        ):
+            logging.debug(
+                "Ignoring the %s (created or processed already)", newfile_stem
+            )
             return
 
+        self.file_names_to_ignore.append(newfile_path.name)
         # Mod 15 Check for extention
         if pathlib.Path(event.src_path).suffix == ".xml":
             if self.model.save_xml:
-                self.copy_shortend(event, self.model.new_filename(newfile_stem))
+                self.execute_with_delay(
+                    self.copy_shortend, event, self.model.new_filename(newfile_stem)
+                )
             else:
-                self.rename_shortend(event, self.model.new_filename(newfile_stem))
+                self.execute_with_delay(
+                    self.rename_shortend, event, self.model.new_filename(newfile_stem)
+                )
+
         else:
             # mod 15 This is a fms file
             if self.model.fms_format == self.model.FMS_BOTH:
-                self.copy_shortend(event, self.model.fms_filename())
+                self.execute_with_delay(
+                    self.copy_shortend, event, self.model.fms_filename()
+                )
+
             elif self.model.fms_format == self.model.FMS_B738:
-                self.rename_shortend(event, self.model.fms_filename())
+                self.execute_with_delay(
+                    self.rename_shortend, event, self.model.fms_filename()
+                )
 
     def copy_shortend(self, event, target_filename):
         """copy based on event source path"""
 
-        logging.debug("Start copy")
+        logging.debug("Start copy target %s", target_filename)
         newfile_path = pathlib.Path(event.src_path)
         filename = newfile_path.stem
         # 10 Change destFile into Path, to use pathib functions
         dest_file = pathlib.Path(newfile_path.parent / target_filename)
 
-        self.file_names_created.append(dest_file.stem)
+        self.file_names_to_ignore.append(dest_file.name)
         if dest_file.is_file():
             logging.info("Destination file exits")
             self.rename_existing_file(dest_file)
@@ -315,9 +367,9 @@ class RenameXmlHandler(PatternMatchingEventHandler):
         # 10 Change destFile into Path, to use pathib functions
         dest_file = pathlib.Path(new_file_path.parent / target_filename)
         # keep the new file to be created to check new event
-        self.file_names_created.append(dest_file.stem)
+        self.file_names_to_ignore.append(dest_file.name)
         if dest_file.is_file():
-            logging.info("Destination file exits")
+            logging.debug("Destination file exits")
             self.rename_existing_file(dest_file)
 
         try:
@@ -338,7 +390,7 @@ class RenameXmlHandler(PatternMatchingEventHandler):
     def rename_existing_file(self, file_to_rename):
         """renames file to samename with datetime"""
 
-        logging.info("Renaming file to datetime version")
+        logging.debug("Renaming file to datetime version")
         backup_file = file_to_rename.parent / pathlib.Path(
             file_to_rename.stem
             + "_"
@@ -346,6 +398,7 @@ class RenameXmlHandler(PatternMatchingEventHandler):
             + file_to_rename.suffix
         )
         try:
+            self.file_names_to_ignore.append(backup_file.name)
             file_to_rename.rename(backup_file)
         except OSError as error:
             logging.error("problem with renaming existing file")
