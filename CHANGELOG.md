@@ -1,3 +1,9 @@
+## v1.3.1 (2023-11-07)
+
+### Fix
+
+- Fixed rename with exisiting
+
 ## v1.3.0 (2023-11-06)
 
 ### Feat
