@@ -368,9 +368,8 @@ class RenameXmlHandler(PatternMatchingEventHandler):
         dest_file = pathlib.Path(new_file_path.parent / target_filename)
         # keep the new file to be created to check new event
         self.file_names_to_ignore.append(dest_file.name)
-        if self.model.save_existing_target and dest_file.is_file():
-            logging.debug("Destination file exits")
-            self.rename_existing_file(dest_file)
+        if dest_file.is_file():
+            self.handle_existing_destination(dest_file)
 
         try:
             new_file_path.rename(dest_file)
@@ -386,6 +385,16 @@ class RenameXmlHandler(PatternMatchingEventHandler):
             logging.error(
                 "Unable to rename %s to %s, error: %s", filename, dest_file, err
             )
+
+    def handle_existing_destination(self, dest_file):
+        """Removes or renames exisiting file"""
+        logging.debug("Destination file exits")
+        if self.model.save_existing_target:
+            logging.debug("Renaming Existing Destination")
+            self.rename_existing_file(dest_file)
+        else:
+            logging.debug("Removing Existing Destination")
+            os.remove(dest_file)
 
     def rename_existing_file(self, file_to_rename):
         """renames file to samename with datetime"""
