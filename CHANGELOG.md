@@ -1,3 +1,13 @@
+## v1.3.0 (2023-11-06)
+
+### Feat
+
+- **renamer**: Don't override target if exist
+
+### Fix
+
+- **renamer**: Implementation of #17 for rename
+
 ## v1.2.0 (2023-11-05)
 
 ### Feat
