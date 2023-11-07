@@ -5,7 +5,7 @@ auto-py-to-exe.exe -c .\auto2Exe.json
 
 pyinstaller --noconfirm --onedir --windowed --icon "C:/Code/sbRenamer/sbRenamer.ico" --clean --add-data "C:/Code/sbRenamer/sbRenamer.ico;."  "C:/Code/sbRenamer/sbRenamer.py"
 
-C:\Code\sbRenamer> pyinstaller --noconfirm --onedir --windowed --icon "C:/Code/sbRenamer/sbRenamer.ico" --clean --add-data "C:/Code/sbRenamer/sbRenamer.ico;."  "C:/Code/sbRenamer/sbRenamer.py" --distpath "C:/Code/sbRenamer/output"
+C:\Code\sbRenamer> pyinstaller --noconfirm --onedir --windowed --icon "C:/Code/sbRenamer/sbRenamer.ico" --clean --add-data "C:/Code/sbRenamer/sbRenamer.ico;."  "C:/Code/sbRenamer/sbRenamer.py" --distpath "C:/Code/sbRenamer/output" --workpath C:\Users\hvdwa\AppData\Local\Temp\ --specpath C:\Users\hvdwa\AppData\Local\Temp\
 
 pyinstaller --noconfirm --onedir --windowed --icon C:/Code/sbRenamer/sbRenamer.ico --clean --add-data C:/Code/sbRenamer/sbRenamer.ico;. C:/Code/sbRenamer/sbRenamer.py --distpath C:\Users\hvdwa\AppData\Local\Temp\tmpgkzmqo6f\application --workpath C:\Users\hvdwa\AppData\Local\Temp\tmpgkzmqo6f\build --specpath C:\Users\hvdwa\AppData\Local\Temp\tmpgkzmqo6f
 
