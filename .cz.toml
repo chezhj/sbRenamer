@@ -11,3 +11,6 @@ version_files = [
 pre_bump_hooks = [
   "build\\make.cmd"
 ]
+post_bump_hooks=[
+  "build\\build.cmd"
+]
