@@ -1,3 +1,9 @@
+## v1.4.0 (2023-11-08)
+
+### Feat
+
+- **renamer**: Ignore destination
+
 ## v1.3.1 (2023-11-07)
 
 ### Fix
