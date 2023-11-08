@@ -35,6 +35,7 @@ CONFIGFILENAME = "config.ini"
 # Mod 13          Actualy delete a file iso renaming
 # Mod 14 20231025 Add Removing old files
 # Mod 15 20231102 New filename & fms listener
+# Mod 16 20231108 Added check if source is destination
 
 
 class Controller:
@@ -59,7 +60,7 @@ class Controller:
         )
 
         self.model.set_callback(self.update_view)
-        self.model.set_log_listener(self.updateWidget)
+        self.model.set_log_listener(self.update_widget)
         if self.model.auto_start:
             logging.info("Auto starting watcher in 3 seconds")
             self.renamer_view.after(3000, self.renamer_view.startStop)
@@ -185,7 +186,7 @@ class Controller:
         """Update View"""
         self.setting_view.updateSaveBtn(self.model.dirty)
 
-    def updateWidget(self, value):
+    def update_widget(self, value):
         """update log widget"""
         self.renamer_view.addLine(value)
 
@@ -197,7 +198,8 @@ class FileDeleter:
         # folder is the name of the folder in which we have to perform the delete operation
         self.folder = folder
 
-        # N is the number of days for which we have to check whether the file is older than the specified days or not
+        # N is the number of days for which we have to check whether the file is older
+        # than the specified days or not
         self.days = int(days)
         logging.debug(
             "Initialised new deleter for path %s and %d number of days",
@@ -338,6 +340,10 @@ class RenameXmlHandler(PatternMatchingEventHandler):
         # 10 Change destFile into Path, to use pathib functions
         dest_file = pathlib.Path(newfile_path.parent / target_filename)
 
+        # mod 16
+        if self.destination_equals_source(dest_file, newfile_path):
+            return
+
         self.file_names_to_ignore.append(dest_file.name)
         if self.model.save_existing_target and dest_file.is_file():
             logging.info("Destination file exits")
@@ -358,6 +364,17 @@ class RenameXmlHandler(PatternMatchingEventHandler):
                 "Unable to copy %s to %s, error: %s", filename, dest_file, err
             )
 
+    # Mod 16
+    def destination_equals_source(self, dest_file, source_file):
+        """Check if files are the same (and existing)"""
+        logging.debug("check if equal")
+        if dest_file.is_file():
+            return_value = dest_file.name == source_file.name
+        else:
+            return_value = False
+        logging.debug("Equal check returns %s", return_value)
+        return return_value
+
     def rename_shortend(self, event, target_filename):
         """Handle file created event by renaming the file that was created"""
         # This method needs to move to the Renamer model??
@@ -366,6 +383,11 @@ class RenameXmlHandler(PatternMatchingEventHandler):
         filename = new_file_path.stem
         # 10 Change destFile into Path, to use pathib functions
         dest_file = pathlib.Path(new_file_path.parent / target_filename)
+
+        # Mod 16
+        if self.destination_equals_source(dest_file, new_file_path):
+            return
+
         # keep the new file to be created to check new event
         self.file_names_to_ignore.append(dest_file.name)
         if dest_file.is_file():
@@ -417,6 +439,8 @@ class RenameXmlHandler(PatternMatchingEventHandler):
 
 
 class MainApp(tk.Tk):
+    """Main tk window"""
+
     def __init__(self):
         super().__init__()
         self.geometry("620x600")
@@ -430,11 +454,11 @@ class MainApp(tk.Tk):
         self._settings = SettingView(self)
         self._settings.grid(column=0, row=0, padx=5, pady=5, ipadx=5)
 
-        self._renamerView = RenamerView(self)
-        self._renamerView.grid(column=0, row=1, padx=5, pady=5, ipadx=5)
+        self._renamer_view = RenamerView(self)
+        self._renamer_view.grid(column=0, row=1, padx=5, pady=5, ipadx=5)
 
         self._config = RenamerSettings(CONFIGFILENAME)
-        controller = Controller(self._config, self._settings, self._renamerView)
+        controller = Controller(self._config, self._settings, self._renamer_view)
 
         # should move to controller?
         self._settings.set_widgets(
@@ -456,7 +480,7 @@ class MainApp(tk.Tk):
 
         self._controller = controller
         self._settings.set_controller(controller)
-        self._renamerView.set_controller(controller)
+        self._renamer_view.set_controller(controller)
 
         self.bind("<Unmap>", self._resize_handler)
 
@@ -468,18 +492,20 @@ class MainApp(tk.Tk):
         minimize_event = False
         for key in dir(event):
             if not key.startswith("_"):
-                savedAttr = getattr(event, key)
+                saved_attr = getattr(event, key)
 
-                if key == "widget" and isinstance(savedAttr, tk.Tk):
+                if key == "widget" and isinstance(saved_attr, tk.Tk):
                     if getattr(event, "type") == "18":
                         minimize_event = True
         if minimize_event:
             self.hide_window()
 
     def hide_window_exit(self):
+        """Hides self"""
         self.hide_window()
 
     def hide_window(self):
+        """Hide to systray"""
         if self.hidden:
             return
         self.hidden = True
@@ -501,17 +527,20 @@ class MainApp(tk.Tk):
         return
 
     def show_window(self):
+        """Unhide from systray"""
         self.icon.stop()
         self.hidden = False
         self.deiconify()
 
     def close(self):
+        """Safe close, stop monitoring first"""
         if self._controller.is_active_monitoring():
             logging.info("Stopping monitoring first")
             self._controller.stop_monitoring()
         self.destroy()
 
     def quit_window(self):
+        """Quit function for icon menu"""
         self.icon.stop()
         self.close()
 
